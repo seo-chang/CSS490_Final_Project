@@ -18,7 +18,7 @@ class ImagenetUtk(torch.utils.data.Dataset):
                  validation_ratio: float = 0.1, save_to_file: bool = True):
         """
         Initialize the Imagenet + UTKFace dataset
-        "(utk-util)" in comments below indicate parameters that are used by utk-util.py
+        "(utk-util)" in comments below indicate parameters that are used by utk-util.py. Some parameters are shared.
         :param base_dir: Datasets folder that contains both tiny-imagenet-200 and UTKFace folders
         :param imagenet_dir: Name of the Tiny Imagenet dataset directory
         :param image_size: Target image size (A method will add paddings or trim the image in the memory)
