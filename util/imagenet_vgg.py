@@ -38,15 +38,16 @@ class ImagenetVgg(torch.utils.data.Dataset):
 
     def download_images(self, size: int = 64) -> None:
         total = 0
+        save_dir = os.path.join(self._base_dir, "modified_datasets", "vgg", "downloaded")
+        os.makedirs(save_dir, exist_ok=True)
         tmp_dir = os.path.join(self._base_dir, self._vgg_dir)
-        img_dir = os.path.join(tmp_dir, "processed")
-        os.makedirs(img_dir, exist_ok=True)
+        os.makedirs(os.path.join(tmp_dir, "processed"), exist_ok=True)
         allowed_img_ext = [".jpg", ".jpeg", ".png"]
         files = os.listdir(os.path.join(tmp_dir, "files"))
         log.debug("File list: %s" % str(files))
         # Use random files
         random.shuffle(files)
-        while total < 500:
+        while total < 520:
             file_n = files[total]
             if file_n.endswith(".txt"):
                 downloaded = False
@@ -76,12 +77,16 @@ class ImagenetVgg(torch.utils.data.Dataset):
                                     # If status code is normal and content size is not 0
                                     if res.status_code == 200 and len(res.content) > 1000:
                                         try:
-                                            with Image.open(io.BytesIO(res.content)) as img:
+                                            with Image.open(io.BytesIO(res.content)).convert('RGB') as img:
                                                 img = img.crop((left, top, right, bot))
-                                                img.save(os.path.join(img_dir, img_name))
-                                                img.close()
-                                                downloaded = True
-                                                total += 1
+                                                img_path = os.path.join(save_dir, img_name)
+                                                img.save(img_path)
+                                                if os.path.getsize(img_path) > 1100:
+                                                    downloaded = True
+                                                    total += 1
+                                                else:
+                                                    log.debug("File too small.")
+                                                    os.remove(img_path)
                                         except UnidentifiedImageError:
                                             log.debug("Not an image file?")
                                             continue
