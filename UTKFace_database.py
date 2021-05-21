@@ -71,10 +71,10 @@ class TempData(torch.utils.data.Dataset):
         :return:
         We decided to use static int (500). 500 = images per class, 50 = number of validations set
         """
-        num = []
+        num = [22]
         count = 0
         while count < (round(image_per_class / len(self._d))):
-            rand_num = random.randint(0, len(self._d[feature]))
+            rand_num = random.randint(0, len(self._d[feature])) # 22
             if rand_num not in num and self._d[feature][rand_num] not in self._total_training:
                 num.append(rand_num)
                 self._total_training.append(self._d[feature][rand_num])
