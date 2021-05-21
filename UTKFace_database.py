@@ -20,7 +20,6 @@ class TempData(torch.utils.data.Dataset):
         # print(arr.shape)
         # self.example = torch.from_numpy(arr).float()
         self._images = []
-
         self._training = {"white": [],  # 0
                           "black": [],  # 1
                           "asian": [],  # 2
@@ -49,9 +48,6 @@ class TempData(torch.utils.data.Dataset):
 
         self._load_images(self._src)
 
-    def _total_training(self):
-        return self._total_training
-
     def __getitem__(self, item) -> (torch.Tensor, int):
         """"
 
@@ -71,10 +67,10 @@ class TempData(torch.utils.data.Dataset):
         :return:
         We decided to use static int (500). 500 = images per class, 50 = number of validations set
         """
-        num = [22]
+        num = []
         count = 0
         while count < (round(image_per_class / len(self._d))):
-            rand_num = random.randint(0, len(self._d[feature])) # 22
+            rand_num = random.randint(0, len(self._d[feature]))  # 22
             if rand_num not in num and self._d[feature][rand_num] not in self._total_training:
                 num.append(rand_num)
                 self._total_training.append(self._d[feature][rand_num])
@@ -223,7 +219,7 @@ class validataion(torch.utils.data.Dataset):
 if __name__ == '__main__':
     test = TempData()
     print(test._total_training)
-    _validataion = validataion( './dataset/', 'UTKFace',  10, test._total_training)
+    _validataion = validataion('./dataset/', 'UTKFace', 10, test._total_training)
     print(len(_validataion._total_training))
     print(len(set(_validataion._total_training)))
     # test.__len__()
