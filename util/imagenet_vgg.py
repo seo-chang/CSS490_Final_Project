@@ -23,7 +23,7 @@ log.addHandler(stream_h)
 class ImagenetVgg(torch.utils.data.Dataset):
 
     def __init__(self, base_dir: str = "../datasets", base_dataset_dir: str = "tiny-imagenet-200",
-                 vgg_dataset_dir: str = "vgg_face_dataset", img_seed: int = 10, total_dataset_size: int = 550):
+                 vgg_dataset_dir: str = "vgg_face_dataset", img_seed: int = 11, total_dataset_size: int = 550):
         random.seed(img_seed)
         self._base_dir = base_dir
         self._base_dataset = base_dataset_dir
@@ -70,11 +70,11 @@ class ImagenetVgg(torch.utils.data.Dataset):
                             img_name = person_n + "-" + ln[0] + img_ext
                             log.debug("%s" % img_name)
                             try:
-                                with requests.get(url) as res:
+                                with requests.get(url, timeout=5) as res:
                                     log.debug("Response code: %s\tSize:%s" % (str(res.status_code),
                                                                               str(len(res.content))))
                                     # If status code is normal and content size is not 0
-                                    if res.status_code == 200 and len(res.content) != 0:
+                                    if res.status_code == 200 and len(res.content) > 1000:
                                         try:
                                             with Image.open(io.BytesIO(res.content)) as img:
                                                 img = img.crop((left, top, right, bot))
