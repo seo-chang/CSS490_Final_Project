@@ -8,20 +8,39 @@ import numpy as np
 import torch.utils.data
 import torchvision.transforms as vision
 
+from util.utk_util import UTKFaceUtil
+
 
 class ImagenetUtk(torch.utils.data.Dataset):
-    def __init__(self, base_dir: str = '../datasets/', imagenet_dir: str = "tiny-imagenet-200",
-                 total_class_count: int = 10, seed: int = 10, validation: bool = False, image_size: int = 224):
+    def __init__(self, base_dir: str = '../datasets/', imagenet_dir: str = "tiny-imagenet-200", image_size: int = 224,
+                 total_class_count: int = 10, validation: bool = False, seed: int = 10, use_utk_util: bool = True,
+                 utk_dir_name: str = "UTKFace", utk_img_size: int = 64, training_size: int = 500,
+                 validation_ratio: float = 0.1, save_to_file: bool = True):
         """
-        Initialize the Imagenet + UTKFace dataset (face dataset)
+        Initialize the Imagenet + UTKFace dataset
+        "(utk-util)" in comments below indicate parameters that are used by utk-util.py
         :param base_dir: Datasets folder that contains both tiny-imagenet-200 and UTKFace folders
-        :param imagenet_dir: Tiny Imagenet dataset directory name
-        :param total_class_count: Reduce the total class number to this value
-        :param seed: Seed for reproducibility
-        :param validation: True if to use UTKFace validation data that was created with utk_util.py. False otherwise.
+        :param imagenet_dir: Name of the Tiny Imagenet dataset directory
         :param image_size: Target image size (A method will add paddings or trim the image in the memory)
+        :param total_class_count: Total number of class to use.
+        :param validation: True to use validation data, False otherwise.
+        :param seed: Seed for reproducibility.
+        :param use_utk_util: True to use utk_util with default settings, False otherwise. (utk-util)
+        :param utk_dir_name: Name of the UTKFace dataset directory (utk-util)
+        :param utk_img_size: Target image size for utk_img_size. Used to match image size with ImageNet (utk-util)
+        :param training_size: Training data size for UTKFace dataset (utk-util)
+        :param validation_ratio: Validation dataset ratio for UTKFace dataset (utk-util)
+        :param save_to_file: True to save UTKFace location files, False otherwise. (utk-util)
         """
         random.seed(seed)
+        if use_utk_util:
+            utk_util = UTKFaceUtil(base_dir=base_dir, utk_dir_name=utk_dir_name, img_seed=seed,
+                                   training_size=training_size, validation_ratio=validation_ratio,
+                                   img_size=utk_img_size, save_to_file=False)
+            # To suppress a warning :)
+            if save_to_file:
+                utk_util.save_to_file()
+
         self._images = []  # [("n01443537_0.jpeg", 7335), ...]
         self._id2name = {}  # n01443537 -> "goldfish, Carassius auratus"
         self._id2int = {}  # n01443537 -> 7335
