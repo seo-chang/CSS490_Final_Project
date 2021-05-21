@@ -1,3 +1,6 @@
+### Project specific
+/datasets/
+
 ### Kate template
 # Swap Files #
 .*.kate-swp
