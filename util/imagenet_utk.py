@@ -83,8 +83,11 @@ class ImagenetUtk(torch.utils.data.Dataset):
 
         # Add paddings around the image
         crop = vision.CenterCrop(self._image_size)
-        arr = np.transpose(np.array(crop(image), dtype="uint8"), (2, 0, 1))
-        return torch.from_numpy(arr), cls_int
+        # TODO: double check if uint8 can be used. until then, use float as dtype
+        # arr = np.transpose(np.array(crop(image), dtype="uint8"), (2, 0, 1))
+        # return torch.from_numpy(arr), cls_int
+        arr = np.transpose(np.array(crop(image)), (2, 0, 1))
+        return torch.from_numpy(arr).float(), cls_int
 
     def __len__(self):
         """
