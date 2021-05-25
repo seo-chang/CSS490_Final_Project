@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 from typing import List
@@ -8,14 +9,12 @@ import numpy as np
 import torch.utils.data
 import torchvision.transforms as vision
 
-from util.utk_util import UTKFaceUtil
-
 
 class ImagenetUtk(torch.utils.data.Dataset):
     def __init__(self, base_dir: str = '../datasets/', imagenet_dir: str = "tiny-imagenet-200", image_size: int = 224,
-                 total_class_count: int = 10, validation: bool = False, seed: int = 10, use_utk_util: bool = True,
-                 utk_dir_name: str = "UTKFace", utk_img_size: int = 64, training_size: int = 500,
-                 validation_ratio: float = 0.1, save_to_file: bool = True):
+                 total_class_count: int = 10, validation: bool = False, seed: int = 10, initialize: bool = True,
+                 use_utk_util: bool = True, utk_dir_name: str = "UTKFace", utk_img_size: int = 64,
+                 training_size: int = 500, validation_ratio: float = 0.1, save_to_file: bool = True):
         """
         Initialize the Imagenet + UTKFace dataset
         "(utk-util)" in comments below indicate parameters that are used by utk-util.py. Some parameters are shared.
@@ -25,7 +24,8 @@ class ImagenetUtk(torch.utils.data.Dataset):
         :param total_class_count: Total number of class to use.
         :param validation: True to use validation data, False otherwise.
         :param seed: Seed for reproducibility.
-        :param use_utk_util: True to use utk_util with default settings, False otherwise. (utk-util)
+        :param initialize: True to use utk_util with default settings, False otherwise. (utk-util)
+        :param use_utk_util: Alias of initialize parameter. (backward compatibility) (utk-util)
         :param utk_dir_name: Name of the UTKFace dataset directory (utk-util)
         :param utk_img_size: Target image size for utk_img_size. Used to match image size with ImageNet (utk-util)
         :param training_size: Training data size for UTKFace dataset (utk-util)
@@ -33,10 +33,10 @@ class ImagenetUtk(torch.utils.data.Dataset):
         :param save_to_file: True to save UTKFace location files, False otherwise. (utk-util)
         """
         random.seed(seed)
-        if use_utk_util:
-            utk_util = UTKFaceUtil(base_dir=base_dir, utk_dir_name=utk_dir_name, img_seed=seed,
-                                   training_size=training_size, validation_ratio=validation_ratio,
-                                   img_size=utk_img_size, save_to_file=False)
+        if initialize or use_utk_util:
+            utk_util = _UTKFaceUtil(base_dir=base_dir, utk_dir_name=utk_dir_name, img_seed=seed,
+                                    training_size=training_size, validation_ratio=validation_ratio,
+                                    img_size=utk_img_size, save_to_file=False)
             # To suppress a warning :)
             if save_to_file:
                 utk_util.save_to_file()
@@ -83,8 +83,8 @@ class ImagenetUtk(torch.utils.data.Dataset):
 
         # Add paddings around the image
         crop = vision.CenterCrop(self._image_size)
-        arr = np.transpose(np.array(crop(image)), (2, 0, 1))
-        return torch.from_numpy(arr).float(), cls_int
+        arr = np.transpose(np.array(crop(image), dtype="uint8"), (2, 0, 1))
+        return torch.from_numpy(arr), cls_int
 
     def __len__(self):
         """
@@ -103,6 +103,13 @@ class ImagenetUtk(torch.utils.data.Dataset):
             return "face"
         else:
             return self._int2name[int_label]
+
+    def get_class_names(self) -> List[str]:
+        """
+        Returns list of class names
+        :return: List of possible class names
+        """
+        return list(self._int2name.values())
 
     def _load_imagenet_words_txt(self) -> List[str]:
         """
@@ -149,7 +156,7 @@ class ImagenetUtk(torch.utils.data.Dataset):
 
     def _load_utk_images(self, validation: bool) -> None:
         """
-        Load UTKFace dataset that was created with utk_util.py, and append to dataset list
+        Load UTKFace dataset that was created with UTKFaceUtil, and append to dataset list
         :param validation: True if using UTKFace validation dataset, False otherwise
         :return: None
         """
@@ -171,9 +178,144 @@ class ImagenetUtk(torch.utils.data.Dataset):
             self._images.append((data, len(self._int2name) - 1))
 
 
+class _UTKFaceUtil:
+    def __init__(self, base_dir: str = '../datasets/', utk_dir_name: str = "UTKFace", img_seed: int = 10,
+                 training_size: int = 500, validation_ratio: float = 0.1, img_size: int = 64,
+                 save_to_file: bool = True):
+        """
+        Creates unique training/validating datasets for UTKFace dataset and
+        :param base_dir: Datasets folder that contains both tiny-imagenet-200 and UTKFace folders
+        :param utk_dir_name: UTKFace dataset directory name
+        :param img_seed: Seed for random number generator
+        :param training_size: Target training dataset size
+        :param validation_ratio: Validation dataset ratio
+        :param img_size: Target image size (this value will be used for resizing)
+        :param save_to_file: True to save to files, False otherwise
+        """
+        random.seed(img_seed)
+
+        self._base_dir = base_dir
+        self._utk_dir = utk_dir_name
+        self._dataset_size = training_size
+        self._validation_ratio = validation_ratio
+        self._src = os.path.join(base_dir, utk_dir_name)
+        self._img_size = img_size
+        self.save_dir = os.path.join(self._base_dir, "modified_datasets", "utk")
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        self._training_dataset = []
+        self._validation_dataset = []
+        self._file_dict = {
+            "male": {
+                "white": [],
+                "black": [],
+                "asian": [],
+                "indian": []
+            },
+            "female": {
+                "white": [],
+                "black": [],
+                "asian": [],
+                "indian": []
+            }
+        }
+        self._load_images()
+        self._update_img()
+
+        if save_to_file:
+            self.save_to_file()
+
+    def save_to_file(self) -> None:
+        train_f_n = os.path.join(self.save_dir, "train.json")
+        with open(train_f_n, "w", encoding="utf-8") as f:
+            json.dump(self._training_dataset, f)
+        print("Training list saved as: %s" % train_f_n)
+
+        val_f_n = os.path.join(self.save_dir, "validation.json")
+        with open(val_f_n, "w", encoding="utf-8") as f:
+            json.dump(self._validation_dataset, f)
+        print("Validation list saved as: %s\n" % val_f_n)
+
+    def _load_images(self) -> None:
+        """
+        Iterate through images and parse data
+        :return: None
+        """
+        for file_name in os.listdir(self._src):
+            sep = file_name.split('_')
+
+            # Parse gender
+            if sep[1] == "0":
+                gender = "male"
+            elif sep[1] == "1":
+                gender = "female"
+            else:
+                continue
+
+            # Parse race
+            if sep[2] == "0":
+                race = "white"
+            elif sep[2] == "1":
+                race = "black"
+            elif sep[2] == "3":
+                race = "asian"
+            elif sep[2] == "4":
+                race = "indian"
+            else:
+                continue
+
+            self._file_dict[gender][race].append(file_name)
+
+        genders = ["male", "female"]
+        races = ["white", "black", "asian", "indian"]
+
+        # Equally distribute all classes to generate fair training/validation data
+        img_per_cls = math.ceil(self._dataset_size / (len(genders) * len(races)))
+        val_per_cls = math.ceil(img_per_cls * self._validation_ratio)
+        print("Images to get per class: %s" % img_per_cls)
+        for gen in genders:
+            for rac in races:
+                print("Current gender: %s\tCurrent race: %s Current class size:%s" % (
+                    gen, rac, len(self._file_dict[gen][rac])))
+                # Shuffle data
+                random.shuffle(self._file_dict[gen][rac])
+                # Create unique training dataset
+                self._training_dataset.extend(self._file_dict[gen][rac][:img_per_cls])
+                # Create unique validation dataset
+                self._validation_dataset.extend(self._file_dict[gen][rac][img_per_cls:img_per_cls + val_per_cls])
+        print("Total length of training dataset: %s" % len(self._training_dataset))
+        print("Total length of validation dataset: %s\n" % len(self._validation_dataset))
+
+    def _update_img(self):
+        # Create modified training data directory
+        train_dir = os.path.join(self.save_dir, "train")
+        os.makedirs(train_dir, exist_ok=True)
+
+        # Create modified validation data directory
+        val_dir = os.path.join(self.save_dir, "val")
+        os.makedirs(val_dir, exist_ok=True)
+
+        # Resize all training dataset images
+        for img_n in self._training_dataset:
+            with PIL.Image.open(os.path.join(self._src, img_n)) as img:
+                img = img.resize((self._img_size, self._img_size))
+                img.save(os.path.join(train_dir, img_n))
+        print("Resized training images. Saved at %s" % train_dir)
+
+        # Resize all validation dataset images
+        for img_n in self._validation_dataset:
+            with PIL.Image.open(os.path.join(self._src, img_n)) as img:
+                img = img.resize((self._img_size, self._img_size))
+                img.save(os.path.join(val_dir, img_n))
+        print("Resized validation images. Saved at %s\n" % val_dir)
+
+
 # Just for testing
 if __name__ == '__main__':
     test = ImagenetUtk(image_size=64)
+    cls_list = test.get_class_names()
+    print("Total class size: %s" % len(cls_list))
+    print("Torch tensor type: %s" % test[0][0].dtype)
     # TinyImagenet dataset
     print("Shape: %s\tLabel: %s" % (test[0][0].shape, test[0][1]))
     # UTKFace dataset
