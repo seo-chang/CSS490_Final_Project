@@ -20,7 +20,7 @@ batch_size = 120
 shuffle = True
 image_size = 64
 """parameters for models"""
-num_epochs = 25  # default size is 15
+num_epochs = 15  # default size is 15
 
 # Load data for UTK
 image_datasets = {'train': ImagenetUtk(base_dir="./datasets", image_size=image_size),
@@ -165,9 +165,8 @@ def visualize_model(model, num_images=10):
                 images_so_far += 1
                 ax = plt.subplot(num_images//2, 2, images_so_far)
                 ax.axis('off')
-                ax.set_title('predicted: {}'.format(class_names[preds[j]]))
-                print(inputs.cpu().data[j])
-                print(type(inputs.cpu().data[j]))
+                ax.set_title(('predicted:' + class_names[preds[j]] +
+                              '\n answer:' + class_names[labels.cpu().numpy()[images_so_far-1]]))
                 imshow(inputs.int().cpu().data[j])
 
                 if images_so_far == num_images:
