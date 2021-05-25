@@ -99,7 +99,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             progress = 0.0
             for inputs, labels in dataloaders[phase]:
                 # print('Iterating ', labels, '...')
-                torch.cuda.empty_cache()
+                torch.cuda.empty_cache() # clean up cache
                 #print(torch.cuda.memory_summary(device=device, abbreviated=False))
                 inputs = inputs.float().to(device)
                 labels = labels.to(device)
