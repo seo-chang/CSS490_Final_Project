@@ -8,62 +8,55 @@ from torch.utils.data import DataLoader
 from torch.optim import lr_scheduler
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import warnings
 import time
 import os
 import copy
 
-warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 ###############################################################
 # data loading / preprocessing block
 
-batch_size = 18
+"""parameters for datasets"""
+batch_size = 120
 shuffle = True
+image_size = 64
+"""parameters for models"""
+num_epochs = 25  # default size is 15
 
 # Load data for UTK
-image_datasets = {'train': ImagenetUtk(base_dir="./datasets"),
-                  'val': ImagenetUtk(base_dir="./datasets", validation=True)}
+image_datasets = {'train': ImagenetUtk(base_dir="./datasets", image_size=image_size),
+                  'val': ImagenetUtk(base_dir="./datasets", validation=True, image_size=image_size)}
 dataloaders = {'train': DataLoader(dataset=image_datasets['train'], batch_size=batch_size, shuffle=shuffle),
                   'val': DataLoader(dataset=image_datasets['val'], batch_size=batch_size, shuffle=shuffle)}
 
-# print(utk_dataset.get_class_name(utk_dataset[0][1]))
-# print('the dataset size is ', len(utk_dataset))
-
-# this classes list will contain class names of items[0] to [8] in string
+# this list will contain class names of items[0] to [8] in string
 class_names = []
 # get class names
-for class_int in range(0, 9):
+for class_int in range(0, 10):
     class_names.append(image_datasets['train'].get_class_name(class_int))
-class_names.append("face")
 
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 
-# print(class_names)
-# print(len(class_names))
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
-############################
 
-# print(len(utk_dataset))
-# print(type(utk_dataset[0][0]))
-# dl_list = iter(utk_dataloader)
-# print(len(dl_list))
-# i = 0
-#
-# inputs, classes = next(dl_list)
-# print('inputs dimensions: ', inputs.ndim)
-# print(inputs.shape)
-# print('len input[0]: ', len(inputs[0]))
-# print('type: ', type(inputs[0]))
-# print(inputs[0].shape)
 
-##############################
+def info_data():
+    """info. about datasets/dataloaders; uncomment if necessary"""
+    print('number of classes:', len(class_names))
+    print('class names:', class_names)
+    print('length of training dataset:', len(image_datasets['train']))
+    print('length of validation dataset:', len(image_datasets['val']))
+    print('batch size:', batch_size)
+    print('number of batches in the training dataloader:', len(iter(dataloaders['train'])))
+    print('number of batches in the training dataloader:', len(iter(dataloaders['val'])))
+    print('device:', device)
+
+
+info_data()  # print out dataset info, comment out if desired
+
 
 def imshow(inp, title=None):
     """Imshow for Tensor."""
-    inp = (inp.numpy().transpose((1, 2, 0))).astype('int32')
-    print(len(inp))
+    inp = (inp.numpy().transpose((1, 2, 0)))
     plt.imshow(inp)
     if title is not None:
         plt.title(title)
@@ -80,6 +73,7 @@ imshow(out, title=[class_names[x] for x in classes])
 
 ################
 # Training the model
+
 
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
     since = time.time()
@@ -102,9 +96,12 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
             running_corrects = 0
 
             # Iterate over data.
+            progress = 0.0
             for inputs, labels in dataloaders[phase]:
-                print('Iterating ', labels, '...')
-                inputs = inputs.to(device)
+                # print('Iterating ', labels, '...')
+                torch.cuda.empty_cache()
+                #print(torch.cuda.memory_summary(device=device, abbreviated=False))
+                inputs = inputs.float().to(device)
                 labels = labels.to(device)
 
                 # zero the parameter gradients
@@ -158,7 +155,7 @@ def visualize_model(model, num_images=10):
 
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(dataloaders['val']):
-            inputs = inputs.to(device)
+            inputs = inputs.float().to(device)
             labels = labels.to(device)
 
             outputs = model(inputs)
@@ -171,18 +168,17 @@ def visualize_model(model, num_images=10):
                 ax.set_title('predicted: {}'.format(class_names[preds[j]]))
                 print(inputs.cpu().data[j])
                 print(type(inputs.cpu().data[j]))
-                imshow(inputs.cpu().data[j])
+                imshow(inputs.int().cpu().data[j])
 
                 if images_so_far == num_images:
                     model.train(mode=was_training)
                     return
         model.train(mode=was_training)
 
+
 model_ft = models.resnet50()
 
 num_ftrs = model_ft.fc.in_features
-# TODO: Here the size of each output sample is set to 2 it is the number of classes.
-# Alternatively, it can be generalized to nn.Linear(num_ftrs, len(class_names)).
 model_ft.fc = nn.Linear(num_ftrs, len(class_names))
 
 model_ft = model_ft.to(device)
@@ -195,9 +191,9 @@ optimizer_ft = optim.SGD(model_ft.parameters(), lr=0.001, momentum=0.9)
 # Decay LR by a factor of 0.1 every 7 epochs
 exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 
-# print(model_ft)
+print(model_ft)
 
 model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
-                       num_epochs=0)
+                       num_epochs=num_epochs)
 
 visualize_model(model_ft)
