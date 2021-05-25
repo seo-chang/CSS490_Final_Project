@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 ###############################################################
 # data loading / preprocessing block
 
-batch_size = 4
+batch_size = 18
 shuffle = True
 
 # Load data for UTK
@@ -42,7 +42,7 @@ dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 # print(len(class_names))
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print("device: ", "cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
 ############################
 
 # print(len(utk_dataset))
@@ -63,6 +63,7 @@ print("device: ", "cuda:0" if torch.cuda.is_available() else "cpu")
 def imshow(inp, title=None):
     """Imshow for Tensor."""
     inp = (inp.numpy().transpose((1, 2, 0))).astype('int32')
+    print(len(inp))
     plt.imshow(inp)
     if title is not None:
         plt.title(title)
@@ -102,6 +103,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
             # Iterate over data.
             for inputs, labels in dataloaders[phase]:
+                print('Iterating ', labels, '...')
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
@@ -167,6 +169,8 @@ def visualize_model(model, num_images=10):
                 ax = plt.subplot(num_images//2, 2, images_so_far)
                 ax.axis('off')
                 ax.set_title('predicted: {}'.format(class_names[preds[j]]))
+                print(inputs.cpu().data[j])
+                print(type(inputs.cpu().data[j]))
                 imshow(inputs.cpu().data[j])
 
                 if images_so_far == num_images:
@@ -174,7 +178,7 @@ def visualize_model(model, num_images=10):
                     return
         model.train(mode=was_training)
 
-model_ft = models.resnet50(pretrained=True)
+model_ft = models.resnet50()
 
 num_ftrs = model_ft.fc.in_features
 # TODO: Here the size of each output sample is set to 2 it is the number of classes.
@@ -194,6 +198,6 @@ exp_lr_scheduler = lr_scheduler.StepLR(optimizer_ft, step_size=7, gamma=0.1)
 # print(model_ft)
 
 model_ft = train_model(model_ft, criterion, optimizer_ft, exp_lr_scheduler,
-                       num_epochs=2)
+                       num_epochs=0)
 
 visualize_model(model_ft)
