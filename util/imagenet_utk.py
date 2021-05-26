@@ -257,9 +257,9 @@ class _UTKFaceUtil:
                 race = "white"
             elif sep[2] == "1":
                 race = "black"
-            elif sep[2] == "3":
+            elif sep[2] == "2":
                 race = "asian"
-            elif sep[2] == "4":
+            elif sep[2] == "3":
                 race = "indian"
             else:
                 continue
