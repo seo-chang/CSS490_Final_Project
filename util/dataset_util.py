@@ -12,7 +12,7 @@ from requests import HTTPError, Timeout, TooManyRedirects
 
 # Setup logger
 log = logging.getLogger("dataset_util")
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", '%m/%d/%Y %I:%M:%S %p')
 stream_h = logging.StreamHandler()
 stream_h.setLevel(logging.DEBUG)
@@ -111,6 +111,11 @@ class DatasetUtil:
             else:
                 self._vgg_load_images()
                 self._vgg_update_images()
+
+    def save_all_json(self) -> None:
+        self.imagenet_save_to_file()
+        self.utk_save_to_file()
+        self.vgg_save_to_file()
 
     def _imagenet_load_words_txt(self) -> None:
         """
