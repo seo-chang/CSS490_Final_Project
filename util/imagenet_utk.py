@@ -10,8 +10,7 @@ from util.dataset_util import DatasetUtil
 
 
 class ImagenetUtk(torch.utils.data.Dataset):
-    def __init__(self, du: DatasetUtil, base_dir: str = './datasets/',
-                 image_size: int = 224, validation: bool = False):
+    def __init__(self, du: DatasetUtil, base_dir: str = './datasets/', image_size: int = 224, validation: bool = False):
         """
         Initialize the Imagenet + UTKFace dataset
         :param du: Dataset utility class
@@ -19,7 +18,6 @@ class ImagenetUtk(torch.utils.data.Dataset):
         :param image_size: Target image size (A method will add paddings or trim the image in the memory)
         :param validation: True to use validation data, False otherwise.
         """
-
         self._base_dir = base_dir
         self._du = du
 
@@ -29,11 +27,11 @@ class ImagenetUtk(torch.utils.data.Dataset):
         self._validation = validation
 
         if not validation:
-            self._images.extend(du.imagenet_train_images)
-            self._images.extend(du.utk_training_dataset)
+            self._images.extend(du.imagenet_train)
+            self._images.extend(du.utk_train)
         else:
-            self._images.extend(du.imagenet_val_images)
-            self._images.extend(du.utk_val_dataset)
+            self._images.extend(du.imagenet_val)
+            self._images.extend(du.utk_val)
 
     def __getitem__(self, idx) -> (torch.Tensor, int):
         """
@@ -55,9 +53,9 @@ class ImagenetUtk(torch.utils.data.Dataset):
         else:
             cls_int = self._images[idx][1]
             if not self._validation:
-                full_file_name = os.path.join(self._du.utk_save_dir, "train", img_name)
+                full_file_name = os.path.join(self._du.utk_post_proc_dir, "train", img_name)
             else:
-                full_file_name = os.path.join(self._du.utk_save_dir, "val", img_name)
+                full_file_name = os.path.join(self._du.utk_post_proc_dir, "val", img_name)
 
         # Uncomment the following line for absolute path
         # full_file_name = os.path.abspath(full_file_name)
@@ -99,12 +97,12 @@ if __name__ == '__main__':
     data_util = DatasetUtil(base_dir="../datasets/")
     test = ImagenetUtk(data_util, image_size=64)
     cls_list = test.get_class_names()
-    print("Total class size: %s" % len(cls_list))
-    print("Total dataset size: %s" % len(test))
-    print("Torch tensor type: %s" % test[0][0].dtype)
+    print("UTK: total class size: %s" % len(cls_list))
+    print("UTK: total dataset size: %s" % len(test))
+    print("UTK: torch tensor type: %s" % test[0][0].dtype)
     # TinyImagenet dataset
-    print("Shape: %s\tLabel: %s\tString label: %s" % (
+    print("UTK: shape: %s\tLabel: %s\tString label: %s" % (
         test[0][0].shape, test[0][1], test.get_class_name(test[0][1])))
     # UTKFace dataset
-    print("Shape: %s\tLabel: %s\tString label: %s" % (
+    print("UTK: shape: %s\tLabel: %s\tString label: %s" % (
         test[5000][0].shape, test[5000][1], test.get_class_name(test[5000][1])))
