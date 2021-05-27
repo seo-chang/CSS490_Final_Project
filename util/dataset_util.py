@@ -45,6 +45,7 @@ class DatasetUtil:
         # Common variables
         self.int2name = {}  # 7335 -> "goldfish, Carassius auratus"
         self._base_dir = base_dir
+        self._post_proc_dir = os.path.join(self._base_dir, "modified_datasets")
         self._train_img_count = train_img_count
         self._validation_ratio = validation_ratio
         self._img_size = img_size
@@ -54,14 +55,14 @@ class DatasetUtil:
         self.imagenet_val = []  # [("n01443537_0.jpeg", 7335), ...]
         self.imagenet_id2int = {}  # n01443537 -> 7335
         self.imagenet_dir = os.path.join(base_dir, imagenet_dir)
-        self._imagenet_post_proc_dir = os.path.join(self._base_dir, "modified_datasets", "imagenet")
+        self._imagenet_post_proc_dir = os.path.join(self._post_proc_dir, "imagenet")
         self._imagenet_cls_cnt = total_class_count - 1
         self._imagenet_id2name = {}  # n01443537 -> "goldfish, Carassius auratus"
 
         # UTKFace variables
         self.utk_train = []
         self.utk_val = []
-        self.utk_post_proc_dir = os.path.join(self._base_dir, "modified_datasets", "utk")
+        self.utk_post_proc_dir = os.path.join(self._post_proc_dir, "utk")
         self._utk_dir = utk_dir_name
         self._utk_src = os.path.join(base_dir, utk_dir_name)
         self._utk_file_dict = {
@@ -84,7 +85,7 @@ class DatasetUtil:
         # VGG variables
         self.vgg_train = []
         self.vgg_val = []
-        self.vgg_post_proc_dir = os.path.join(self._base_dir, "modified_datasets", 'vgg')
+        self.vgg_post_proc_dir = os.path.join(self._post_proc_dir, 'vgg')
         self._vgg_dir = os.path.join(base_dir, vgg_dataset_dir)
 
         # Create post-processing directories
@@ -93,6 +94,7 @@ class DatasetUtil:
         os.makedirs(self.vgg_post_proc_dir, exist_ok=True)
 
         if load_from_json:
+            self._load_index_json()
             self._imagenet_load_images_json()
             self._utk_load_images_json()
             self._vgg_load_images_json()
@@ -112,7 +114,24 @@ class DatasetUtil:
                 self._vgg_load_images()
                 self._vgg_update_images()
 
+    def save_index_json(self) -> None:
+        # Save int2name data
+        file_n = os.path.join(self._post_proc_dir, "int2name.json")
+        with open(file_n, "w", encoding="utf-8") as f:
+            json.dump(self.int2name, f)
+        log.info("int2name saved as: %s" % file_n)
+
+    def _load_index_json(self) -> None:
+        # Load int2name
+        file_n = os.path.join(self._post_proc_dir, "int2name.json")
+        with open(file_n, "r", encoding="utf-8") as f:
+            self.int2name = json.load(f)
+        # Convert the labels back to int
+        self.int2name = [(int(label), name) for label, name in self.int2name]
+        log.info("int2name loaded from: %s" % file_n)
+
     def save_all_json(self) -> None:
+        self.save_index_json()
         self.imagenet_save_to_file()
         self.utk_save_to_file()
         self.vgg_save_to_file()
@@ -179,24 +198,52 @@ class DatasetUtil:
                     self.imagenet_val.append((file_n, cls_id))
 
     def _imagenet_load_images_json(self) -> None:
+        # Load id2int
+        file_n = os.path.join(self._imagenet_post_proc_dir, "id2int.json")
+        with open(file_n, "r", encoding="utf-8") as f:
+            self.imagenet_id2int = json.load(f)
+        # Convert the labels back to int
+        self.imagenet_id2int = [(cls_id, int(label)) for cls_id, label in self.imagenet_id2int]
+        log.info("Tiny ImageNet id2int loaded from: %s" % file_n)
+
+        # Load id2name
+        file_n = os.path.join(self._imagenet_post_proc_dir, "id2name.json")
+        with open(file_n, "r", encoding="utf-8") as f:
+            self._imagenet_id2name = json.load(f)
+        log.info("Tiny ImageNet id2name loaded from: %s" % file_n)
+
         # Load training data
         train_f_n = os.path.join(self._imagenet_post_proc_dir, "train.json")
         with open(train_f_n, "r", encoding="utf-8") as f:
             self.imagenet_train = json.load(f)
-        log.debug("Tiny ImageNet training list loaded from: %s" % train_f_n)
+        log.info("Tiny ImageNet training list loaded from: %s" % train_f_n)
 
         # Load validation data
         val_f_n = os.path.join(self._imagenet_post_proc_dir, "validation.json")
         with open(val_f_n, "r", encoding="utf-8") as f:
             self.imagenet_val = json.load(f)
-        log.debug("Tiny ImageNet validation list loaded from: %s" % val_f_n)
+        log.info("Tiny ImageNet validation list loaded from: %s" % val_f_n)
 
     def imagenet_save_to_file(self) -> None:
+        # Save id2int
+        file_n = os.path.join(self._imagenet_post_proc_dir, "id2int.json")
+        with open(file_n, "w", encoding="utf-8") as f:
+            json.dump(self.imagenet_id2int, f)
+        log.info("Tiny ImageNet id2int saved as: %s" % file_n)
+
+        # Save id2name
+        file_n = os.path.join(self._imagenet_post_proc_dir, "id2name.json")
+        with open(file_n, "w", encoding="utf-8") as f:
+            json.dump(self._imagenet_id2name, f)
+        log.info("Tiny ImageNet id2name saved as: %s" % file_n)
+
+        # Save training dataset
         train_f_n = os.path.join(self._imagenet_post_proc_dir, "train.json")
         with open(train_f_n, "w", encoding="utf-8") as f:
             json.dump(self.imagenet_train, f)
         log.info("Tiny ImageNet training list saved as: %s" % train_f_n)
 
+        # Save validation dataset
         val_f_n = os.path.join(self._imagenet_post_proc_dir, "validation.json")
         with open(val_f_n, "w", encoding="utf-8") as f:
             json.dump(self.imagenet_val, f)
@@ -280,7 +327,7 @@ class DatasetUtil:
             with Image.open(os.path.join(self._utk_src, img_n)) as img:
                 img = img.resize((self._img_size, self._img_size))
                 img.save(os.path.join(val_dir, img_n))
-        log.debug("Resized validation images. Saved at %s\n" % val_dir)
+        log.debug("Resized validation images. Saved at %s" % val_dir)
 
     def _utk_load_images_json(self) -> None:
         """
@@ -293,7 +340,7 @@ class DatasetUtil:
             self.utk_train = json.load(f)
         # Convert the labels back to int
         self.utk_train = [(img, int(label)) for img, label in self.utk_train]
-        log.debug("UTKFace training list loaded from: %s" % train_f_n)
+        log.info("UTKFace training list loaded from: %s" % train_f_n)
 
         # Load validation data
         val_f_n = os.path.join(self.utk_post_proc_dir, "validation.json")
@@ -301,7 +348,7 @@ class DatasetUtil:
             self.utk_val = json.load(f)
         # Convert the labels back to int
         self.utk_val = [(img, int(label)) for img, label in self.utk_val]
-        log.debug("UTKFace validation list loaded from: %s" % val_f_n)
+        log.info("UTKFace validation list loaded from: %s" % val_f_n)
 
     def utk_save_to_file(self) -> None:
         """
@@ -312,13 +359,13 @@ class DatasetUtil:
         train_f_n = os.path.join(self.utk_post_proc_dir, "train.json")
         with open(train_f_n, "w", encoding="utf-8") as f:
             json.dump(self.utk_train, f)
-        log.debug("Training list saved as: %s" % train_f_n)
+        log.info("UTKFace training list saved as: %s" % train_f_n)
 
         # Save validation data
         val_f_n = os.path.join(self.utk_post_proc_dir, "validation.json")
         with open(val_f_n, "w", encoding="utf-8") as f:
             json.dump(self.utk_val, f)
-        log.debug("Validation list saved as: %s\n" % val_f_n)
+        log.info("UTKFace validation list saved as: %s" % val_f_n)
 
     def vgg_download_images(self) -> None:
         """
@@ -438,7 +485,7 @@ class DatasetUtil:
             self.vgg_train = json.load(f)
         # Convert the labels back to int
         self.vgg_train = [(img, int(label)) for img, label in self.vgg_train]
-        log.debug("VGG training list loaded from: %s" % train_f_n)
+        log.info("VGG training list loaded from: %s" % train_f_n)
 
         # Load validation data
         val_f_n = os.path.join(self.vgg_post_proc_dir, "validation.json")
@@ -446,7 +493,7 @@ class DatasetUtil:
             self.vgg_val = json.load(f)
         # Convert the labels back to int
         self.vgg_val = [(img, int(label)) for img, label in self.vgg_val]
-        log.debug("VGG validation list loaded from: %s" % val_f_n)
+        log.info("VGG validation list loaded from: %s" % val_f_n)
 
     def vgg_save_to_file(self) -> None:
         train_f_n = os.path.join(self.vgg_post_proc_dir, "train.json")
