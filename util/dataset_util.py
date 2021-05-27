@@ -66,13 +66,15 @@ class DatasetUtil:
                 "white": [],
                 "black": [],
                 "asian": [],
-                "indian": []
+                "indian": [],
+                "other": []
             },
             "female": {
                 "white": [],
                 "black": [],
                 "asian": [],
-                "indian": []
+                "indian": [],
+                "other": []
             }
         }
 
@@ -183,13 +185,15 @@ class DatasetUtil:
                 race = "asian"
             elif sep[2] == "3":
                 race = "indian"
+            elif sep[2] == "4":
+                race = "other"
             else:
                 continue
 
             self._utk_file_dict[gender][race].append((file_name, len(self.int2name) - 1))
 
         genders = ["male", "female"]
-        races = ["white", "black", "asian", "indian"]
+        races = ["white", "black", "asian", "indian", "other"]
 
         # Equally distribute all classes to generate fair training/validation data
         img_per_cls = math.ceil(self._train_img_count / (len(genders) * len(races)))
@@ -388,7 +392,7 @@ class DatasetUtil:
 # Just for testing
 if __name__ == '__main__':
     test = DatasetUtil(base_dir="../datasets/")
-    test.vgg_download_images()
+    # test.vgg_download_images()
     print(test.imagenet_train[:5])
     print(test.imagenet_val[:5])
     print(test.utk_train[:5])
