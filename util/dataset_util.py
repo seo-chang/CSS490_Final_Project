@@ -34,7 +34,7 @@ class DatasetUtil:
         :param utk_dir_name: Name of the UTKFace dataset directory
         :param vgg_dataset_dir: Name of the VGG dataset directory
         :param total_class_count: Total number of class to use.
-        :param img_size: Target image size. Used to match image size with ImageNet (utk-util)
+        :param img_size: Target image size. Used to match utk, vgg image size with Tiny ImageNet images
         :param train_img_count: Number of images to use for training per class
         :param validation_ratio: Validation dataset ratio
         :param load_from_json: Load dataset lists from json files.
