@@ -3,7 +3,11 @@ import logging
 import math
 import os
 import random
+import json
+import torchvision.transforms as vision
 
+import PIL.Image
+import numpy as np
 import requests
 import torch.utils.data
 from PIL import Image, UnidentifiedImageError
@@ -23,15 +27,35 @@ log.addHandler(stream_h)
 class ImagenetVgg(torch.utils.data.Dataset):
 
     def __init__(self, base_dir: str = "../datasets", base_dataset_dir: str = "tiny-imagenet-200",
-                 vgg_dataset_dir: str = "vgg_face_dataset", img_seed: int = 11, total_dataset_size: int = 550):
+                 vgg_dataset_dir: str = "vgg_face_dataset", img_seed: int = 11, image_size=64,
+                 total_dataset_size: int = 550, validation: bool= False):
         random.seed(img_seed)
         self._base_dir = base_dir
         self._base_dataset = base_dataset_dir
         self._vgg_dir = vgg_dataset_dir
+        self._vgg_dir_modified_datasets = os.path.join(self._base_dir, "modified_datasets", 'vgg')
+        self._images = []
+        self._image_size = image_size
+        self._training =[]
+        self._validating = []
+        self._vgg_validation = validation
+
         self._dataset_size = total_dataset_size
 
-    def __getitem__(self, item) -> (torch.Tensor, int):
-        pass
+    def __getitem__(self, idx) -> (torch.Tensor, int):
+        # if item name belongs in imagenet
+        # if item in self._images:
+
+        if self._vgg_validation:
+            full_file_name = os.path.join(self._vgg_dir_modified_datasets, "val", self._validating[idx])
+        else:
+            full_file_name = os.path.join(self._vgg_dir_modified_datasets, "train", self._training[idx])
+
+        image = PIL.Image.open(full_file_name).convert("RGB")
+        crop = vision.CenterCrop(self._image_size)
+        arr = np.transpose(np.array(crop(image)), (2, 0, 1))
+        return torch.from_numpy(arr).float()
+
 
     def __len__(self) -> int:
         return self._dataset_size
@@ -47,7 +71,7 @@ class ImagenetVgg(torch.utils.data.Dataset):
         log.debug("File list: %s" % str(files))
         # Use random files
         random.shuffle(files)
-        while total < 520:
+        while total < 700:
             file_n = files[total]
             if file_n.endswith(".txt"):
                 downloaded = False
@@ -106,7 +130,59 @@ class ImagenetVgg(torch.utils.data.Dataset):
                                 log.debug(err)
                                 continue
 
+    def save_to_file(self) -> None:
+        for name in os.listdir(os.path.join(self._vgg_dir_modified_datasets, 'downloaded')):
+            self._images.append(name)
+        random.shuffle(self._images)
+        self._training = self._images[:500]
+        self._validating = self._images[500:550]
+        print(len(self._training))
+        print(len(self._validating))
+
+    def _load_vgg_images(self, validation: bool) -> None:
+        """
+        Divide into training and validating datasets and save it as json
+        :return: None
+        """
+        # create modified validation data directory
+        val_dir = os.path.join(self._vgg_dir_modified_datasets, "val")
+        os.makedirs(val_dir, exist_ok=True)
+
+        # create modified training data directory
+        train_dir = os.path.join(self._vgg_dir_modified_datasets, "train")
+        os.makedirs(train_dir, exist_ok=True)
+
+        if validation:
+            val_f_n = os.path.join(self._vgg_dir_modified_datasets, "validation.json")
+            with open(val_f_n, "w", encoding="utf-8") as f:
+                json.dump(self._validating, f)
+            print("Validation list saved as: %s\n" % val_f_n)
+
+            # Resize all validation dataset images
+            for img_n in self._validating:
+                with PIL.Image.open(os.path.join(self._vgg_dir_modified_datasets, 'downloaded', img_n)) as img:
+                    img = img.resize((self._image_size, self._image_size))
+                    img.save(os.path.join(val_dir, img_n))
+            print("Resized validation images. Saved at %s\n" % val_dir)
+
+        else:
+            train_f_n = os.path.join(self._vgg_dir_modified_datasets, "train.json")
+            with open(train_f_n, "w", encoding="utf-8") as f:
+                json.dump(self._training, f)
+            print("Training list saved as: %s" % train_f_n)
+
+            # Resize all validation dataset images
+            for img_n in self._training:
+                with PIL.Image.open(os.path.join(self._vgg_dir_modified_datasets, 'downloaded', img_n)) as img:
+                    img = img.resize((self._image_size, self._image_size))
+                    img.save(os.path.join(train_dir, img_n))
+            print("Resized validation images. Saved at %s\n" % val_dir)
+
+
 
 if __name__ == '__main__':
     data = ImagenetVgg()
-    data.download_images()
+    data.save_to_file()
+    data._load_vgg_images(True)
+    data._load_vgg_images(False)
+    print(data[0])
