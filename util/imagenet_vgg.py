@@ -1,107 +1,109 @@
-import io
-import logging
-import math
 import os
-import random
+from typing import List
 
-import requests
+import PIL.Image
+import numpy as np
 import torch.utils.data
-from PIL import Image, UnidentifiedImageError
-from requests import HTTPError, Timeout, TooManyRedirects
+import torchvision.transforms as vision
 
-# Setup logger
-
-log = logging.getLogger("imagenet_vgg")
-log.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s: %(message)s", '%m/%d/%Y %I:%M:%S %p')
-stream_h = logging.StreamHandler()
-stream_h.setLevel(logging.DEBUG)
-stream_h.setFormatter(formatter)
-log.addHandler(stream_h)
+from util.dataset_util import DatasetUtil
 
 
 class ImagenetVgg(torch.utils.data.Dataset):
 
-    def __init__(self, base_dir: str = "../datasets", base_dataset_dir: str = "tiny-imagenet-200",
-                 vgg_dataset_dir: str = "vgg_face_dataset", img_seed: int = 11, total_dataset_size: int = 550):
-        random.seed(img_seed)
+    def __init__(self, du: DatasetUtil, base_dir: str = './datasets/', image_size: int = 224, validation: bool = False):
+        """
+        Initialize the Imagenet + VGG dataset
+        :param du: Dataset utility class
+        :param base_dir: Datasets folder that contains both tiny-imagenet-200 and UTKFace folders
+        :param image_size: Target image size (A method will add paddings or trim the image in the memory)
+        :param validation: True to use validation data, False otherwise.
+        """
         self._base_dir = base_dir
-        self._base_dataset = base_dataset_dir
-        self._vgg_dir = vgg_dataset_dir
-        self._dataset_size = total_dataset_size
+        self._du = du
 
-    def __getitem__(self, item) -> (torch.Tensor, int):
-        pass
+        self._images = []
+        self._image_size = image_size
+        self._base_dir = base_dir
+        self._validation = validation
+
+        if not validation:
+            self._images.extend(du.imagenet_train)
+            self._images.extend(du.vgg_train)
+        else:
+            self._images.extend(du.imagenet_val)
+            self._images.extend(du.vgg_val)
+
+    def __getitem__(self, idx) -> (torch.Tensor, int):
+        """
+        Reads the RGB image file at idx, and return it as an image tensor with an int label.
+        Int label can be converted to a human-readable label with get_class_name() function.
+        :param idx: Index of data to get
+        :return: Tensor containing image as an array, and an integer representing the image number
+        """
+        img_name = self._images[idx][0]
+
+        # if the image belongs to imagenet
+        if str(img_name).startswith("n") or str(img_name).startswith("val"):
+            cls_id = self._images[idx][1]
+            cls_int = self._du.imagenet_id2int[cls_id]
+            if not self._validation:
+                full_file_name = os.path.join(self._du.imagenet_dir, "train", cls_id, "images", img_name)
+            else:
+                full_file_name = os.path.join(self._du.imagenet_dir, "val", "images", img_name)
+        else:
+            cls_int = self._images[idx][1]
+            if not self._validation:
+                full_file_name = os.path.join(self._du.vgg_post_proc_dir, "train", img_name)
+            else:
+                full_file_name = os.path.join(self._du.vgg_post_proc_dir, "val", img_name)
+
+        # Uncomment the following line for absolute path
+        # full_file_name = os.path.abspath(full_file_name)
+        image = PIL.Image.open(full_file_name).convert("RGB")
+
+        # Add paddings around the image
+        crop = vision.CenterCrop(self._image_size)
+        # TODO: double check if uint8 can be used. until then, use float as dtype
+        # arr = np.transpose(np.array(crop(image), dtype="uint8"), (2, 0, 1))
+        # return torch.from_numpy(arr), cls_int
+        arr = np.transpose(np.array(crop(image)), (2, 0, 1))
+        return torch.from_numpy(arr).float(), cls_int
 
     def __len__(self) -> int:
-        return self._dataset_size
+        """
+        Get length of the dataset
+        :return: Total image count
+        """
+        return len(self._images)
 
-    def download_images(self, size: int = 64) -> None:
-        total = 0
-        tmp_dir = os.path.join(self._base_dir, self._vgg_dir)
-        img_dir = os.path.join(tmp_dir, "processed")
-        os.makedirs(img_dir, exist_ok=True)
-        allowed_img_ext = [".jpg", ".jpeg", ".png"]
-        files = os.listdir(os.path.join(tmp_dir, "files"))
-        log.debug("File list: %s" % str(files))
-        # Use random files
-        random.shuffle(files)
-        while total < 500:
-            file_n = files[total]
-            if file_n.endswith(".txt"):
-                downloaded = False
-                person_n = file_n[:-4]
-                # log.debug("Current file: %s" % file_n)
-                with open(os.path.join(tmp_dir, "files", file_n), "r", encoding="utf-8") as f:
-                    lines = f.readlines()
-                    while not downloaded:
-                        ln_idx = random.randint(0, len(lines) - 1)
-                        ln = lines[ln_idx].strip().split()
-                        url = ln[1]
-                        img_ext = url[-4:]
-                        left = math.floor(float(ln[2]))
-                        top = math.floor(float(ln[3]))
-                        right = math.floor(float(ln[4]))
-                        bot = math.floor(float(ln[5]))
-                        # If left, top data of the bounding box is bigger than 0 and
-                        # image extension is known, and if the bounding box size is bigger than the given size
-                        if (0 <= left and 0 <= top) and img_ext.lower() in allowed_img_ext and (
-                                size <= right - left and size <= bot - top):
-                            img_name = person_n + "-" + ln[0] + img_ext
-                            log.debug("%s" % img_name)
-                            try:
-                                with requests.get(url, timeout=5) as res:
-                                    log.debug("Response code: %s\tSize:%s" % (str(res.status_code),
-                                                                              str(len(res.content))))
-                                    # If status code is normal and content size is not 0
-                                    if res.status_code == 200 and len(res.content) > 1000:
-                                        try:
-                                            with Image.open(io.BytesIO(res.content)) as img:
-                                                img = img.crop((left, top, right, bot))
-                                                img.save(os.path.join(img_dir, img_name))
-                                                img.close()
-                                                downloaded = True
-                                                total += 1
-                                        except UnidentifiedImageError:
-                                            log.debug("Not an image file?")
-                                            continue
-                            except ConnectionError:
-                                log.debug("ConnectionError")
-                                continue
-                            except HTTPError:
-                                log.debug("HTTPError")
-                                continue
-                            except Timeout:
-                                log.debug("Timeout")
-                                continue
-                            except TooManyRedirects:
-                                log.debug("TooManyRedirects")
-                                continue
-                            except Exception as err:
-                                log.debug(err)
-                                continue
+    def get_class_name(self, int_label: int) -> str:
+        """
+        Convert an integer label to a human-readable class name
+        :param int_label: Integer label to convert
+        :return: Human-readable class name. e.g: "cat", "face", etc..
+        """
+        return self._du.int2name[int_label]
+
+    def get_class_names(self) -> List[str]:
+        """
+        Returns list of class names
+        :return: List of possible class names
+        """
+        return list(self._du.int2name.values())
 
 
+# Just for testing
 if __name__ == '__main__':
-    data = ImagenetVgg()
-    data.download_images()
+    data_util = DatasetUtil(base_dir="../datasets/")
+    test = ImagenetVgg(data_util, image_size=64)
+    cls_list = test.get_class_names()
+    print("VGG: total class size: %s" % len(cls_list))
+    print("VGG: total dataset size: %s" % len(test))
+    print("VGG: torch tensor type: %s" % test[0][0].dtype)
+    # TinyImagenet dataset
+    print("VGG: shape: %s\tLabel: %s\tString label: %s" % (
+        test[0][0].shape, test[0][1], test.get_class_name(test[0][1])))
+    # UTKFace dataset
+    print("VGG: shape: %s\tLabel: %s\tString label: %s" % (
+        test[5000][0].shape, test[5000][1], test.get_class_name(test[5000][1])))
