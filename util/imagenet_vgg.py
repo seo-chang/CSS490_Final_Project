@@ -22,7 +22,7 @@ class ImagenetVgg(torch.utils.data.Dataset):
         self._base_dir = base_dir
         self._du = du
 
-        self._images = []
+        self._images = []  # [("n01443537_0.jpeg", 7335), ...]
         self._image_size = image_size
         self._base_dir = base_dir
         self._validation = validation

@@ -10,6 +10,7 @@ from util.dataset_util import DatasetUtil
 
 
 class ImagenetUtk(torch.utils.data.Dataset):
+
     def __init__(self, du: DatasetUtil, base_dir: str = './datasets/', image_size: int = 224, validation: bool = False):
         """
         Initialize the Imagenet + UTKFace dataset
@@ -69,7 +70,7 @@ class ImagenetUtk(torch.utils.data.Dataset):
         arr = np.transpose(np.array(crop(image)), (2, 0, 1))
         return torch.from_numpy(arr).float(), cls_int
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Get length of the dataset
         :return: Total image count
