@@ -1,5 +1,6 @@
 import os
 from typing import List
+# import logging as log
 
 import PIL.Image
 import numpy as np
@@ -41,15 +42,19 @@ class Imagenet(torch.utils.data.Dataset):
         """
         img_name = self._images[idx][0]
 
-        cls_id = self._images[idx][1]
-        cls_int = self._du.imagenet_id2int[cls_id]
-        if not self._validation:
-            full_file_name = os.path.join(self._du.imagenet_dir, "train", cls_id, "images", img_name)
+        # if the image belongs to imagenet
+        if str(img_name).startswith("n") or str(img_name).startswith("val"):
+            cls_id = self._images[idx][1]
+            cls_int = self._du.imagenet_id2int[cls_id]
+            if not self._validation:
+                full_file_name = os.path.join(self._du.imagenet_dir, "train", cls_id, "images", img_name)
+            else:
+                full_file_name = os.path.join(self._du.imagenet_dir, "val", "images", img_name)
         else:
-            full_file_name = os.path.join(self._du.imagenet_dir, "val", "images", img_name)
+            print("Invalid! this imagenet class only works for tiny-Imagenet")
 
-
-
+        # Uncomment the following line for absolute path
+        # full_file_name = os.path.abspath(full_file_name)
         image = PIL.Image.open(full_file_name).convert("RGB")
 
         # Add paddings around the image
@@ -92,6 +97,7 @@ if __name__ == '__main__':
     cls_list = test.get_class_names()
     print("IMAGENET: total class size: %s" % len(cls_list))
     print("IMAGENET: total dataset size: %s" % len(test))
+
     print("IMAGENET: torch tensor type: %s" % test[0][0].dtype)
     print("IMAGENET: shape: %s\tLabel: %s\tString label: %s" % (
         test[0][0].shape, test[0][1], test.get_class_name(test[0][1])))
