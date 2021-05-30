@@ -9,9 +9,10 @@ import torchvision.transforms as vision
 
 from util.dataset_util import DatasetUtil
 
+
 class Imagenet(torch.utils.data.Dataset):
 
-    def __init__(self, du: DatasetUtil, base_dir: str ='./datasets', image_size: int = 224, validation: bool = False):
+    def __init__(self, du: DatasetUtil, base_dir: str = './datasets', image_size: int = 224, validation: bool = False):
         """
         Initialize the Imagenet dataset
         :param du: Dataset utility class
@@ -30,8 +31,6 @@ class Imagenet(torch.utils.data.Dataset):
             self._images.extend(du.imagenet_train)
         else:
             self._images.extend(du.imagenet_val)
-
-
 
     def __getitem__(self, idx) -> (torch.Tensor, int):
         """
@@ -65,14 +64,12 @@ class Imagenet(torch.utils.data.Dataset):
         arr = np.transpose(np.array(crop(image)), (2, 0, 1))
         return torch.from_numpy(arr).float(), cls_int
 
-
     def __len__(self) -> int:
         """
         Get length of the dataset
         :return: Total image count
         """
         return len(self._images)
-
 
     def get_class_name(self, int_label: int) -> str:
         """
@@ -81,7 +78,6 @@ class Imagenet(torch.utils.data.Dataset):
         :return: Human-readable class name. e.g: "cat", "face", etc..
         """
         return self._du.int2name[int_label]
-
 
     def get_class_names(self) -> List[str]:
         """
@@ -93,7 +89,7 @@ class Imagenet(torch.utils.data.Dataset):
 
 if __name__ == '__main__':
     data_util = DatasetUtil(base_dir="../datasets/")
-    test = Imagenet(data_util, image_size = 64)
+    test = Imagenet(data_util, image_size=64)
     cls_list = test.get_class_names()
     print("IMAGENET: total class size: %s" % len(cls_list))
     print("IMAGENET: total dataset size: %s" % len(test))

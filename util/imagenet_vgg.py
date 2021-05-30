@@ -106,4 +106,4 @@ if __name__ == '__main__':
         test[0][0].shape, test[0][1], test.get_class_name(test[0][1])))
     # UTKFace dataset
     print("VGG: shape: %s\tLabel: %s\tString label: %s" % (
-        test[5000][0].shape, test[5000][1], test.get_class_name(test[5000][1])))
+        test[4999][0].shape, test[4999][1], test.get_class_name(test[4999][1])))
