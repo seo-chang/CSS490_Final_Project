@@ -91,11 +91,14 @@ class DatasetUtil:
 
         # VGG and UTK variables
         self.vgg_utk_val = []
+        self.vgg_post_proc_dir = os.path.join(self._post_proc_dir, 'vgg')
+        self._vgg_utk_val_dir = os.path.join(base_dir,'modified_datasets' , 'vgg_utk_val')
 
         # Create post-processing directories
         os.makedirs(self._imagenet_post_proc_dir, exist_ok=True)
         os.makedirs(self.utk_post_proc_dir, exist_ok=True)
         os.makedirs(self.vgg_post_proc_dir, exist_ok=True)
+        os.makedirs(self._vgg_utk_val_dir, exist_ok=True)
 
         if load_from_json:
             self._load_index_json()
@@ -141,6 +144,7 @@ class DatasetUtil:
         self.imagenet_save_to_file()
         self.utk_save_to_file()
         self.vgg_save_to_file()
+        self.vgg_utk_val_save_to_file()
 
     def _imagenet_load_words_txt(self) -> None:
         """
@@ -512,13 +516,18 @@ class DatasetUtil:
             json.dump(self.vgg_val, f)
         log.info("VGG validation list saved as: %s" % val_f_n)
 
-    # TODO: Create a method to save vgg_utk_val into a json file
     def _load_vgg_utk_val(self) -> None:
         # append two validation data
         for file_n, label in self.utk_val:
             self.vgg_utk_val.append((os.path.join(self.utk_post_proc_dir, "val", file_n), label))
         for file_n, label in self.vgg_val:
             self.vgg_utk_val.append((os.path.join(self.vgg_post_proc_dir, "val", file_n), label))
+
+    def vgg_utk_val_save_to_file(self) -> None:
+        val_f_n = os.path.join(self._vgg_utk_val_dir, "validation.json")
+        with open(val_f_n, "w", encoding="utf-8") as f:
+            json.dump(self.vgg_val, f)
+        log.info("VGG validation list saved as: %s" % val_f_n)
 
 
 # Just for testing
@@ -528,7 +537,10 @@ if __name__ == '__main__':
     # test.utk_save_to_file()
     # test.vgg_save_to_file()
     # test.vgg_download_images()
+    test._load_vgg_utk_val()
     print(test.vgg_utk_val)
+    test.vgg_utk_val_save_to_file()
+
     # print(test.vgg_utk_val[:5])
     # print(test.imagenet_train[:5])
     # print(test.imagenet_val[:5])
