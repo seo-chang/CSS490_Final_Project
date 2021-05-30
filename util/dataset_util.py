@@ -267,11 +267,11 @@ class DatasetUtil:
         log.info("Tiny ImageNet validation list saved as: %s" % val_f_n)
 
         if export_img:
-            os.makedirs(os.path.join(self._imagenet_post_proc_dir, "train"), exist_ok=True)
-            os.makedirs(os.path.join(self._imagenet_post_proc_dir, "val"), exist_ok=True)
+            os.makedirs(os.path.join(self._imagenet_post_proc_dir, "val", "images"), exist_ok=True)
             # Copy all training files to post proc dir
             for file_n, cls_id in self.imagenet_train:
                 full_file_name = os.path.join(self.imagenet_dir, "train", cls_id, "images", file_n)
+                os.makedirs(os.path.join(self._imagenet_post_proc_dir, "train", cls_id, "images"), exist_ok=True)
                 copy2(full_file_name, os.path.join(self._imagenet_post_proc_dir, "train", cls_id, "images", file_n))
             # Copy all validation files to post proc dir
             for file_n, cls_id in self.imagenet_val:
@@ -573,7 +573,7 @@ class DatasetUtil:
 # Just for testing
 if __name__ == '__main__':
     test = DatasetUtil(base_dir="../datasets/", load_from_json=True)
-    test.save_all_json()
+    test.save_all_json(True)
 
     # test.imagenet_save_to_file()
     # test.utk_save_to_file()
