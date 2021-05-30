@@ -524,10 +524,10 @@ class DatasetUtil:
             self.vgg_utk_val.append((os.path.join(self.vgg_post_proc_dir, "val", file_n), label))
 
     def vgg_utk_val_save_to_file(self) -> None:
-        val_f_n = os.path.join(self._vgg_utk_val_dir, "validation.json")
+        val_f_n = os.path.join(self._vgg_utk_val_dir, "vgg_val.json")
         with open(val_f_n, "w", encoding="utf-8") as f:
             json.dump(self.vgg_val, f)
-        log.info("VGG validation list saved as: %s" % val_f_n)
+        log.info("VGG-UTK validation list saved as: %s" % val_f_n)
 
 
 # Just for testing
