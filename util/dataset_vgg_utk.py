@@ -8,12 +8,12 @@ import torch.utils.data
 from util.dataset_util import DatasetUtil
 
 
-class val_dataset_vgg_utk(torch.utils.data.Dataset):
-    def __init__(self, du: DatasetUtil,  image_size: int = 224):
+class ValDatasetVggUtk(torch.utils.data.Dataset):
+    def __init__(self, du: DatasetUtil, image_size: int = 224):
         self._du = du
         self._images = []  # [("n01443537_0.jpeg", 7335), ...]
         self._image_size = image_size
-        self._images.extend(du.vgg_utk_val) 
+        self._images.extend(du.vgg_utk_val)
 
     def __len__(self) -> int:
         """
@@ -41,10 +41,8 @@ class val_dataset_vgg_utk(torch.utils.data.Dataset):
         return torch.from_numpy(arr).float(), cls_int
 
 
-
 if __name__ == '__main__':
     data_util = DatasetUtil(base_dir="../datasets/")
-    test = val_dataset_vgg_utk(data_util)
+    test = ValDatasetVggUtk(data_util)
     print(test[0])
-    test = val_dataset_vgg_utk(data_util)
-
+    test = ValDatasetVggUtk(data_util)
