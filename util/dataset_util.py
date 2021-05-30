@@ -24,6 +24,7 @@ class DatasetUtil:
 
     def __init__(self, base_dir: str = './datasets/', imagenet_dir: str = "tiny-imagenet-200",
                  utk_dir_name: str = "UTKFace", vgg_dataset_dir: str = "vgg_face_dataset",
+                 val_vgg_utk_dir: str = "vgg_utk_val",
                  total_class_count: int = 10, img_size: int = 64, train_img_count: int = 500,
                  validation_ratio: float = 0.1, vgg_download: bool = False, load_from_json: bool = False,
                  seed: int = 10):
@@ -88,10 +89,16 @@ class DatasetUtil:
         self.vgg_post_proc_dir = os.path.join(self._post_proc_dir, 'vgg')
         self._vgg_dir = os.path.join(base_dir, vgg_dataset_dir)
 
+        # VGG and UTK variables
+        self.vgg_utk_val = []
+        self.vgg_utk_val_post_proc_dir = os.path.join(self._post_proc_dir, "vgg_utk_val")
+        self._vgg_utk_val_dir = os.path.join(base_dir, val_vgg_utk_dir)
+
         # Create post-processing directories
         os.makedirs(self._imagenet_post_proc_dir, exist_ok=True)
         os.makedirs(self.utk_post_proc_dir, exist_ok=True)
         os.makedirs(self.vgg_post_proc_dir, exist_ok=True)
+        os.makedirs(self.vgg_utk_val_post_proc_dir, exist_ok=True)
 
         if load_from_json:
             self._load_index_json()
@@ -506,17 +513,36 @@ class DatasetUtil:
             json.dump(self.vgg_val, f)
         log.info("VGG validation list saved as: %s" % val_f_n)
 
+    def save_vgg_utk_val(self) -> None:
+        # append two validation data
+        self.vgg_utk_val.extend(self.utk_val)
+        self.vgg_utk_val.extend(self.vgg_val)
+
+        # save the file in vgg_utk_val
+        for img_n, _ in self.utk_val:
+            with Image.open(os.path.join(self._utk_src, img_n)) as img:
+                img.save(os.path.join(self.vgg_utk_val_post_proc_dir, img_n))
+        log.info("Save UTK validation images. Saved at %s" % self.vgg_utk_val_post_proc_dir)
+
+        for img_n, _ in self.vgg_val:
+            with Image.open(os.path.join(self.vgg_post_proc_dir, 'downloaded', img_n)) as img:
+                img.save(os.path.join(self.vgg_utk_val_post_proc_dir, img_n))
+        log.info("Save VGG validation images. Saved at %s" % self.vgg_utk_val_post_proc_dir)
+
 
 # Just for testing
 if __name__ == '__main__':
     test = DatasetUtil(base_dir="../datasets/")
-    test.imagenet_save_to_file()
-    test.utk_save_to_file()
-    test.vgg_save_to_file()
-    test.vgg_download_images()
-    print(test.imagenet_train[:5])
-    print(test.imagenet_val[:5])
-    print(test.utk_train[:5])
-    print(test.utk_val[:5])
-    print(test.vgg_train[:5])
-    print(test.vgg_val[:5])
+    # test.imagenet_save_to_file()
+    # test.utk_save_to_file()
+    # test.vgg_save_to_file()
+    # test.vgg_download_images()
+    test.save_vgg_utk_val()
+    print(test.vgg_utk_val)
+    # print(test.vgg_utk_val[:5])
+    # print(test.imagenet_train[:5])
+    # print(test.imagenet_val[:5])
+    # print(test.utk_train[:5])
+    # print(test.utk_val[:5])
+    # print(test.vgg_train[:5])
+    # print(test.vgg_val[:5])
