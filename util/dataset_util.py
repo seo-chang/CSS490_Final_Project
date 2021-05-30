@@ -4,7 +4,7 @@ import logging
 import math
 import os
 import random
-from shutil import copy2
+import shutil
 from typing import List
 
 import requests
@@ -272,18 +272,19 @@ class DatasetUtil:
             for file_n, cls_id in self.imagenet_train:
                 full_file_name = os.path.join(self.imagenet_dir, "train", cls_id, "images", file_n)
                 os.makedirs(os.path.join(self._imagenet_post_proc_dir, "train", cls_id, "images"), exist_ok=True)
-                copy2(full_file_name, os.path.join(self._imagenet_post_proc_dir, "train", cls_id, "images", file_n))
+                shutil.copy2(full_file_name,
+                             os.path.join(self._imagenet_post_proc_dir, "train", cls_id, "images", file_n))
             # Copy all validation files to post proc dir
             for file_n, cls_id in self.imagenet_val:
                 full_file_name = os.path.join(self.imagenet_dir, "val", "images", file_n)
-                copy2(full_file_name, os.path.join(self._imagenet_post_proc_dir, "val", "images", file_n))
+                shutil.copy2(full_file_name, os.path.join(self._imagenet_post_proc_dir, "val", "images", file_n))
 
     def import_imagenet_images(self) -> None:
         os.makedirs(os.path.join(self.imagenet_dir), exist_ok=True)
         # Copy all training files to pre proc dir
-        copy2(os.path.join(self._imagenet_post_proc_dir, "train"), self.imagenet_dir)
+        shutil.move(os.path.join(self._imagenet_post_proc_dir, "train"), os.path.join(self.imagenet_dir, "train"))
         # Copy all validation files to pre proc dir
-        copy2(os.path.join(self._imagenet_post_proc_dir, "val"), self.imagenet_dir)
+        shutil.move(os.path.join(self._imagenet_post_proc_dir, "val"), os.path.join(self.imagenet_dir, "val"))
 
     def _utk_load_images(self) -> None:
         """
