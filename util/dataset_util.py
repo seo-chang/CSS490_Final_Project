@@ -4,6 +4,7 @@ import logging
 import math
 import os
 import random
+from shutil import copy2
 from typing import List
 
 import requests
@@ -141,9 +142,9 @@ class DatasetUtil:
         assert type(self.int2name) == dict
         log.info("int2name loaded from: %s" % file_n)
 
-    def save_all_json(self) -> None:
+    def save_all_json(self, export_imagenet_img: bool = False) -> None:
         self._save_index_json()
-        self._imagenet_save_to_file()
+        self._imagenet_save_to_file(export_imagenet_img)
         self._utk_save_to_file()
         self._vgg_save_to_file()
         self._vgg_utk_val_save_to_file()
@@ -240,7 +241,7 @@ class DatasetUtil:
         assert type(self.imagenet_val) == list
         log.info("Tiny ImageNet validation list loaded from: %s" % val_f_n)
 
-    def _imagenet_save_to_file(self) -> None:
+    def _imagenet_save_to_file(self, export_img: bool = False) -> None:
         # Save id2int
         file_n = os.path.join(self._imagenet_post_proc_dir, "id2int.json")
         with open(file_n, "w", encoding="utf-8") as f:
@@ -264,6 +265,25 @@ class DatasetUtil:
         with open(val_f_n, "w", encoding="utf-8") as f:
             json.dump(self.imagenet_val, f)
         log.info("Tiny ImageNet validation list saved as: %s" % val_f_n)
+
+        if export_img:
+            os.makedirs(os.path.join(self._imagenet_post_proc_dir, "train"), exist_ok=True)
+            os.makedirs(os.path.join(self._imagenet_post_proc_dir, "val"), exist_ok=True)
+            # Copy all training files to post proc dir
+            for file_n, cls_id in self.imagenet_train:
+                full_file_name = os.path.join(self.imagenet_dir, "train", cls_id, "images", file_n)
+                copy2(full_file_name, os.path.join(self._imagenet_post_proc_dir, "train", cls_id, "images", file_n))
+            # Copy all validation files to post proc dir
+            for file_n, cls_id in self.imagenet_val:
+                full_file_name = os.path.join(self.imagenet_dir, "val", "images", file_n)
+                copy2(full_file_name, os.path.join(self._imagenet_post_proc_dir, "val", "images", file_n))
+
+    def import_imagenet_images(self) -> None:
+        os.makedirs(os.path.join(self.imagenet_dir), exist_ok=True)
+        # Copy all training files to pre proc dir
+        copy2(os.path.join(self._imagenet_post_proc_dir, "train"), self.imagenet_dir)
+        # Copy all validation files to pre proc dir
+        copy2(os.path.join(self._imagenet_post_proc_dir, "val"), self.imagenet_dir)
 
     def _utk_load_images(self) -> None:
         """
