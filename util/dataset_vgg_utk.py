@@ -1,10 +1,8 @@
 import PIL
 import numpy as np
+import torch.utils.data
 import torchvision.transforms as vision
 
-import os
-
-import torch.utils.data
 from util.dataset_util import DatasetUtil
 
 
@@ -23,10 +21,9 @@ class ValDatasetVggUtk(torch.utils.data.Dataset):
         return len(self._images)
 
     def __getitem__(self, idx) -> (torch.Tensor, int):
-        img_name = self._images[idx][0]
+        full_file_name = self._images[idx][0]
 
         cls_int = self._images[idx][1]
-        full_file_name = os.path.join(self._du.vgg_utk_val_post_proc_dir, img_name)
 
         # Uncomment the following line for absolute path
         # full_file_name = os.path.abspath(full_file_name)

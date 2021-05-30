@@ -91,14 +91,11 @@ class DatasetUtil:
 
         # VGG and UTK variables
         self.vgg_utk_val = []
-        self.vgg_utk_val_post_proc_dir = os.path.join(self._post_proc_dir, "vgg_utk_val")
-        self._vgg_utk_val_dir = os.path.join(base_dir, val_vgg_utk_dir)
 
         # Create post-processing directories
         os.makedirs(self._imagenet_post_proc_dir, exist_ok=True)
         os.makedirs(self.utk_post_proc_dir, exist_ok=True)
         os.makedirs(self.vgg_post_proc_dir, exist_ok=True)
-        os.makedirs(self.vgg_utk_val_post_proc_dir, exist_ok=True)
 
         if load_from_json:
             self._load_index_json()
@@ -120,6 +117,8 @@ class DatasetUtil:
             else:
                 self._vgg_load_images()
                 self._vgg_update_images()
+
+            self._load_vgg_utk_val()
 
     def save_index_json(self) -> None:
         # Save int2name data
@@ -513,21 +512,13 @@ class DatasetUtil:
             json.dump(self.vgg_val, f)
         log.info("VGG validation list saved as: %s" % val_f_n)
 
-    def save_vgg_utk_val(self) -> None:
+    # TODO: Create a method to save vgg_utk_val into a json file
+    def _load_vgg_utk_val(self) -> None:
         # append two validation data
-        self.vgg_utk_val.extend(self.utk_val)
-        self.vgg_utk_val.extend(self.vgg_val)
-
-        # save the file in vgg_utk_val
-        for img_n, _ in self.utk_val:
-            with Image.open(os.path.join(self._utk_src, img_n)) as img:
-                img.save(os.path.join(self.vgg_utk_val_post_proc_dir, img_n))
-        log.info("Save UTK validation images. Saved at %s" % self.vgg_utk_val_post_proc_dir)
-
-        for img_n, _ in self.vgg_val:
-            with Image.open(os.path.join(self.vgg_post_proc_dir, 'downloaded', img_n)) as img:
-                img.save(os.path.join(self.vgg_utk_val_post_proc_dir, img_n))
-        log.info("Save VGG validation images. Saved at %s" % self.vgg_utk_val_post_proc_dir)
+        for file_n, label in self.utk_val:
+            self.vgg_utk_val.append((os.path.join(self.utk_post_proc_dir, "val", file_n), label))
+        for file_n, label in self.vgg_val:
+            self.vgg_utk_val.append((os.path.join(self.vgg_post_proc_dir, "val", file_n), label))
 
 
 # Just for testing
@@ -537,7 +528,6 @@ if __name__ == '__main__':
     # test.utk_save_to_file()
     # test.vgg_save_to_file()
     # test.vgg_download_images()
-    test.save_vgg_utk_val()
     print(test.vgg_utk_val)
     # print(test.vgg_utk_val[:5])
     # print(test.imagenet_train[:5])
