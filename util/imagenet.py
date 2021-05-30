@@ -1,6 +1,5 @@
 import os
 from typing import List
-# import logging as log
 
 import PIL.Image
 import numpy as np
@@ -8,6 +7,9 @@ import torch.utils.data
 import torchvision.transforms as vision
 
 from util.dataset_util import DatasetUtil
+
+
+# import logging as log
 
 
 class Imagenet(torch.utils.data.Dataset):
@@ -40,17 +42,12 @@ class Imagenet(torch.utils.data.Dataset):
         :return: Tensor containing image as an array, and an integer representing the image number
         """
         img_name = self._images[idx][0]
-
-        # if the image belongs to imagenet
-        if str(img_name).startswith("n") or str(img_name).startswith("val"):
-            cls_id = self._images[idx][1]
-            cls_int = self._du.imagenet_id2int[cls_id]
-            if not self._validation:
-                full_file_name = os.path.join(self._du.imagenet_dir, "train", cls_id, "images", img_name)
-            else:
-                full_file_name = os.path.join(self._du.imagenet_dir, "val", "images", img_name)
+        cls_id = self._images[idx][1]
+        cls_int = self._du.imagenet_id2int[cls_id]
+        if not self._validation:
+            full_file_name = os.path.join(self._du.imagenet_dir, "train", cls_id, "images", img_name)
         else:
-            print("Invalid! this imagenet class only works for tiny-Imagenet")
+            full_file_name = os.path.join(self._du.imagenet_dir, "val", "images", img_name)
 
         # Uncomment the following line for absolute path
         # full_file_name = os.path.abspath(full_file_name)
