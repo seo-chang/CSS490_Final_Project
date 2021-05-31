@@ -364,7 +364,6 @@ def visualize_model(model, datasets: dict, dataloaders: dict, num_images=10):
                 ax.axis('off')
                 pred_str = datasets["train"].get_class_name(preds[j].item()).split(",")[0]
                 gt_str = datasets["train"].get_class_name(labels.cpu().numpy()[images_so_far - 1]).split(",")[0]
-                # TODO: Using .get_class_names() for actual prediction is discouraged as index may not be correct.
                 ax.set_title(('Pred:%s   GT:%s' % (pred_str, gt_str)))
                 image_show(imgs.int().cpu().data[j])
 
