@@ -1,3 +1,5 @@
+import os.path
+
 import PIL
 import numpy as np
 import torch.utils.data
@@ -24,6 +26,10 @@ class ValDatasetVggUtk(torch.utils.data.Dataset):
         full_file_name = self._images[idx][0]
 
         cls_int = self._images[idx][1]
+        # if current data is imagenet validation data
+        if type(cls_int) == str:
+            cls_int = self._du.imagenet_id2int[cls_int]
+            full_file_name = os.path.join(self._du.imagenet_dir, "val", "images", full_file_name)
 
         # Uncomment the following line for absolute path
         # full_file_name = os.path.abspath(full_file_name)
@@ -41,5 +47,4 @@ class ValDatasetVggUtk(torch.utils.data.Dataset):
 if __name__ == '__main__':
     data_util = DatasetUtil(base_dir="../datasets/")
     test = ValDatasetVggUtk(data_util)
-    print(test[0])
-    test = ValDatasetVggUtk(data_util)
+    print(test[-10])

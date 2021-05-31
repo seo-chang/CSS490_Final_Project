@@ -515,7 +515,7 @@ class DatasetUtil:
             with Image.open(os.path.join(self.vgg_post_proc_dir, 'downloaded', img_n)) as img:
                 img = img.resize((self._img_size, self._img_size))
                 img.save(os.path.join(val_dir, img_n))
-        log.info("Resized images saved.")
+        log.debug("Resized images saved.")
 
     def _vgg_load_images_json(self) -> None:
         # Load training data
@@ -548,19 +548,22 @@ class DatasetUtil:
         log.info("VGG validation list saved as: %s" % val_f_n)
 
     def _load_vgg_utk_val(self) -> None:
-        # append two validation data
+        # append all validation data
         for file_n, label in self.utk_val:
             self.vgg_utk_val.append((os.path.join(self.utk_post_proc_dir, "val", file_n), label))
         for file_n, label in self.vgg_val:
             self.vgg_utk_val.append((os.path.join(self.vgg_post_proc_dir, "val", file_n), label))
+        for file_n, label_id in self.imagenet_val:
+            self.vgg_utk_val.append((file_n, label_id))
 
     def _vgg_utk_load_images_json(self) -> None:
         # Load VGG-UTK validation data
         val_f_n = os.path.join(self._vgg_utk_val_dir, "validation.json")
         with open(val_f_n, "r", encoding="utf-8") as f:
             self.vgg_utk_val = json.load(f)
-        # Convert the labels back to int
-        self.vgg_utk_val = [(img, int(label)) for img, label in self.vgg_utk_val]
+        # Convert the labels back to int if the label is digit
+        self.vgg_utk_val = [(img, int(label)) if str(label).isdigit() else (img, label) for img, label in
+                            self.vgg_utk_val]
         assert type(self.vgg_utk_val) == list
         log.info("VGG-UTK validation list loaded from: %s" % val_f_n)
 
@@ -573,7 +576,7 @@ class DatasetUtil:
 
 # Just for testing
 if __name__ == '__main__':
-    test = DatasetUtil(base_dir="../datasets/", load_from_json=True)
+    test = DatasetUtil(base_dir="../datasets/")
     test.save_all_json(True)
 
     # test.imagenet_save_to_file()
@@ -582,7 +585,7 @@ if __name__ == '__main__':
     # test.vgg_download_images()
     # print(test.vgg_utk_val)
 
-    # print(test.vgg_utk_val[:5])
+    print(test.vgg_utk_val)
     # print(test.imagenet_train[:5])
     # print(test.imagenet_val[:5])
     # print(test.utk_train[:5])
