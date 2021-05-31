@@ -8,7 +8,7 @@ import copy
 import os
 import random
 import time
-from typing import Any
+from typing import Any, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -47,7 +47,10 @@ torch.cuda.manual_seed_all(seed)
 #     np.random.seed(worker_seed)
 #     random.seed(worker_seed)
 
-"""## Data Preprocessing"""
+# %% md
+## Data Preprocessing
+
+# %%
 
 # Parameter settings for batching
 BATCH_SIZE = 128
@@ -101,6 +104,7 @@ utk_vgg_dataloader = DataLoader(dataset=utk_vgg_dataset, batch_size=BATCH_SIZE,
 
 
 # %% md
+
 ## Dataset preview
 
 # %%
@@ -128,6 +132,8 @@ info_data(utk_datasets, utk_dataloaders)
 print("VGG Face dataset statistics")
 info_data(vgg_datasets, vgg_dataloaders)
 
+
+# %%
 
 def image_show(inp, title=None):
     """Imshow for Tensor."""
@@ -162,7 +168,11 @@ get_preview(dataloaders=utk_dataloaders, title="UTKFace Preview")
 
 get_preview(dataloaders=vgg_dataloaders, title="VGGFace Preview")
 
-"""## Model Training"""
+# %% md
+
+## Model Training
+
+# %%
 
 # Parameters
 EPOCH = 25
@@ -293,18 +303,46 @@ def train_model(model_ft: Any, dataloaders, image_datasets, verbose=False):
 
 # %%
 
-imgnet_model_ft = train_model(models.resnet50(), dataloaders=imagenet_dataloaders, image_datasets=imagenet_datasets,
-                              verbose=True)
+imgnet_model_ft, imgnet_stats = train_model(models.resnet50(), dataloaders=imagenet_dataloaders,
+                                            image_datasets=imagenet_datasets,
+                                            verbose=True)
 
-utk_model_ft = train_model(models.resnet50(), dataloaders=utk_dataloaders, image_datasets=utk_datasets, verbose=True)
+# %%
+
+utk_model_ft, utk_stats = train_model(models.resnet50(), dataloaders=utk_dataloaders, image_datasets=utk_datasets,
+                                      verbose=True)
+
+# %%
 
 # To see if we can get the same accuracy
-# utk_model_ft2 = train_model(models.resnet50(), dataloaders=utk_dataloaders, image_datasets=utk_datasets, verbose=True)
+# utk_model_ft2, _ = train_model(models.resnet50(), dataloaders=utk_dataloaders, image_datasets=utk_datasets,
+#                                verbose=True)
 
-vgg_model_ft = train_model(models.resnet50(), dataloaders=vgg_dataloaders, image_datasets=vgg_datasets, verbose=True)
+# %%
 
-"""## Model Visualization"""
+vgg_model_ft, vgg_stats = train_model(models.resnet50(), dataloaders=vgg_dataloaders, image_datasets=vgg_datasets,
+                                      verbose=True)
 
+
+# %%
+
+# Save stats
+def save_stats(s: List[List], file_n: str) -> None:
+    with open(file_n, "w", encoding="utf-8") as f:
+        for elem in s:
+            f.write("%s,%s,%s,%s\n" % (elem[0], elem[1], elem[2], elem[3]))
+
+
+save_stats(imgnet_stats, "imgnet_stats.csv")
+save_stats(utk_stats, "utk_stats.csv")
+save_stats(vgg_stats, "vgg_stats.csv")
+
+
+# %% md
+
+## Model Visualization
+
+# %%
 
 def visualize_model(model, datasets: dict, dataloaders: dict, num_images=10):
     was_training = model.training
@@ -340,10 +378,14 @@ def visualize_model(model, datasets: dict, dataloaders: dict, num_images=10):
 
 # Visualize utk models
 visualize_model(utk_model_ft, utk_datasets, utk_dataloaders)
+
+# %%
+
 # Visualize vgg models
 visualize_model(vgg_model_ft, vgg_datasets, vgg_dataloaders)
 
 
+# %%
 # make predictions for utk_vgg dataset
 def model_prediction(model):
     was_training = model.training
@@ -370,12 +412,17 @@ def model_prediction(model):
     model.train(mode=was_training)
 
 
+# %%
 model_prediction(utk_model_ft)
 
+# %%
 model_prediction(vgg_model_ft)
 
-"""# ROC Curve"""
 
+# %% md
+# ROC Curve
+
+# %%
 
 def _plot_roc_curve(val, preds):
     fpr, tpr, _ = roc_curve(val, preds)
