@@ -30,17 +30,17 @@ from util.imagenet_vgg import ImagenetVgg
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Using %s for training/validating the model" % device)
 
+# Reproducibility related settings
+# See https://pytorch.org/docs/stable/notes/randomness.html for more info.
 seed = 1029
-
 random.seed(seed)
 os.environ['PYTHONHASHSEED'] = str(seed)
 np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
-
-# # setting up seeds for reproducibility
-# torch.manual_seed(0)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 # def seed_worker(worker_id):
 #     worker_seed = torch.initial_seed() % 2 ** 32 + worker_id
