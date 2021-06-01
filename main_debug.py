@@ -4,7 +4,41 @@
 
 # %%
 
+# from google.colab import drive
+# drive.mount('/content/drive')
+
+# %%
+
+# !pwd
+# !ls drive/MyDrive/CSS490/
+# !mkdir ./datasets
+# !cp drive/MyDrive/CSS490/modified_datasets.tar.gz ./datasets
+# !mkdir ./util
+# !cp -r drive/MyDrive/CSS490/util/ ./
+# !tar -xf ./datasets/modified_datasets.tar.gz --directory=./datasets/
+# !python --version
+
+# %%
+
+# !mkdir. / datasets
+# !mkdir. / util
+# # Clone unstable branch
+# !git
+# clone - b
+# unstable
+# https: // github.com / seo - chang / CSS490_Final_Project
+# # Copy in case of pulling
+# !cp - r. / CSS490_Final_Project / util /./
+# !curl - OL
+# https: // github.com / seo - chang / CSS490_Final_Project / releases / latest / download / modified_datasets.zip
+# !unzip - qn. / modified_datasets.zip - d. / datasets
+# !ls
+# !python - -version
+
+# %%
+
 import copy
+import math
 import os
 import random
 import time
@@ -12,6 +46,7 @@ from typing import Any, List
 
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -138,10 +173,11 @@ info_data(vgg_datasets, vgg_dataloaders)
 def image_show(inp, title=None):
     """Imshow for Tensor."""
     inp = inp.numpy().transpose((1, 2, 0))
-    plt.figure(figsize=(10, 10), dpi=100)
-    plt.imshow(inp)
+    fig1 = plt.figure(figsize=(10, 10), dpi=100)
+    ax1 = fig1.add_subplot(1, 1, 1)
+    ax1.imshow(inp)
     if title is not None:
-        plt.title(title)
+        ax1.set_title(title)
 
 
 def get_preview(dataloaders: dict, title: str):
@@ -173,6 +209,19 @@ get_preview(dataloaders=vgg_dataloaders, title="VGGFace Preview")
 ## Model Training
 
 # %%
+
+# load models; this will save time
+
+# utk_model_ft = models.resnet50()
+# vgg_model_ft = models.resnet50()
+
+# utk_model_ft.load_state_dict(torch.load('utk_model_weights.pth'))
+# vgg_model_ft.load_state_dict(torch.load('vgg_model_weights.pth'))
+# utk_model_ft.eval()
+# vgg_model_ft.eval()
+
+# %%
+
 
 # Parameters
 EPOCH = 25
@@ -206,7 +255,7 @@ def train_model(model_ft: Any, dataloaders, image_datasets, verbose=False):
 
                 running_loss = 0.0
                 running_corrects = 0  # Positive
-                running_incorrect = 0  # Negative
+                running_incorrects = 0  # Negative
 
                 # Iterate over data.
                 for imgs, labels in dl[phase]:
@@ -234,24 +283,28 @@ def train_model(model_ft: Any, dataloaders, image_datasets, verbose=False):
                     # statistics
                     running_loss += loss.item() * imgs.size(0)
                     running_corrects += torch.eq(preds, labels.data).sum()
-                    running_incorrect += torch.not_equal(preds, labels.data).sum()
+                    running_incorrects += torch.not_equal(preds, labels.data).sum()
 
                     # print(running_loss, running_corrects)
 
                 if phase == 'train':
                     scheduler.step()
                 dataset_size = len(img_datasets[phase])
-                epoch_loss = running_loss / dataset_size  # FN
-                epoch_acc = running_corrects.double() / dataset_size  # TP
-                epoch_tn = running_incorrect.double() / dataset_size  # TN
+                """
+                running_corrects.double() = True (True positive + True negative) 
+                running_incorrects.double() = False (False positive + False negative)
+                """
 
-                # print(epoch_loss, epoch_acc)
-                # print(epoch_tn)
+                epoch_loss = running_loss / dataset_size
+                epoch_acc = running_corrects.double() / dataset_size
+                epoch_tn = running_incorrects.double() / dataset_size
 
                 if verbose:
-                    print('{} Loss: {:.4f} Acc: {:.2f}%'.format(
+                    print("Running corrects: %s" % running_corrects.item())
+                    print("Running incorrects: %s" % running_incorrects.item())
+                    print("Dataset size: %s" % dataset_size)
+                    print('{} Loss: {:.4f} Acc: {:.2f}%\n'.format(
                         phase, epoch_loss, epoch_acc * 100))
-                    print()
                 stat.append(epoch_loss)
                 stat.append(epoch_acc.item())
                 # print('this is stat: ' + str(stat))
@@ -337,6 +390,13 @@ save_stats(imgnet_stats, "imgnet_stats.csv")
 save_stats(utk_stats, "utk_stats.csv")
 save_stats(vgg_stats, "vgg_stats.csv")
 
+# %%
+
+# Save models
+torch.save(imgnet_model_ft.state_dict(), 'imgnet_model_weights.pth')
+torch.save(utk_model_ft.state_dict(), 'utk_model_weights.pth')
+torch.save(vgg_model_ft.state_dict(), 'vgg_model_weights.pth')
+
 
 # %% md
 
@@ -348,8 +408,9 @@ def visualize_model(model, datasets: dict, dataloaders: dict, num_images=10):
     was_training = model.training
     model.eval()
     images_so_far = 0
-    plt.figure(figsize=(10, 15), dpi=100)
-
+    fig2 = plt.figure(figsize=(10, 15), dpi=100)
+    row = math.ceil(num_images / 2)
+    col = 2
     with torch.no_grad():
         for i, (imgs, labels) in enumerate(dataloaders['val']):
             imgs = imgs.float().to(device)
@@ -360,12 +421,15 @@ def visualize_model(model, datasets: dict, dataloaders: dict, num_images=10):
 
             for j in range(imgs.size()[0]):
                 images_so_far += 1
-                ax = plt.subplot(num_images // 2, 2, images_so_far)
-                ax.axis('off')
+
                 pred_str = datasets["train"].get_class_name(preds[j].item()).split(",")[0]
                 gt_str = datasets["train"].get_class_name(labels.cpu().numpy()[images_so_far - 1]).split(",")[0]
-                ax.set_title(('Pred:%s   GT:%s' % (pred_str, gt_str)))
-                image_show(imgs.int().cpu().data[j])
+
+                output_img = imgs.int().cpu().data[j].numpy().transpose((1, 2, 0))
+                ax2 = fig2.add_subplot(row, col, images_so_far)
+                ax2.imshow(output_img)
+                ax2.axis('off')
+                ax2.set_title(('Pred:%s GT:%s' % (pred_str, gt_str)))
 
                 if images_so_far == num_images:
                     model.train(mode=was_training)
@@ -384,15 +448,118 @@ visualize_model(utk_model_ft, utk_datasets, utk_dataloaders)
 visualize_model(vgg_model_ft, vgg_datasets, vgg_dataloaders)
 
 
-# %%
 # make predictions for utk_vgg dataset
 def model_prediction(model):
     was_training = model.training
-    correct = 0
+    # correct = 0
     total = 0
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    results = np.zeros((10, 10), dtype=int)
+    model.eval()
+    run_cnt = 50
+    for x in range(run_cnt):
+        print("Current run: %s" % x)
+        # Disable gradient calculation
+        with torch.no_grad():
+            for i, (imgs, labels) in enumerate(utk_vgg_dataloader):
+                imgs = imgs.float().to(device)
+                labels = labels.to(device)
+
+                outputs = model(imgs)
+                _, preds = torch.max(outputs, 1)
+
+                for i in range(preds.size()[0]):
+                    results[utk_vgg_dataset[i][1]][preds[i].item()] += 1
+                    total += 1
+                model.train(mode=was_training)
+
+        # print(results)
+
+        for i in range(len(results)):  # get true positive (all correctly classified faces)
+            tp += results[i][i]
+
+        for i in range(len(results) - 1):  # true negative (all things that that are correctly classified as non-faces)
+            for j in range(len(results) - 1):
+                tn += results[j][i]
+
+        for i in range(len(results) - 1):  # false positive (all other things incorrectly classified as face)
+            fp += results[i][9]
+
+        for i in range(len(results) - 1):  # false negative (all faces incorrectly classified as non-face)
+            fn += results[9][i]
+
+    total = total // run_cnt
+    tp = tp // run_cnt
+    tn = tn // run_cnt
+    fp = fp // run_cnt
+    fn = fn // run_cnt
+    print(tp, tn, fp, fn)
+
+    results = results / run_cnt
+
+    # for i in range(len(results)): # get false positive; iterate through each column
+    #     for j in range(len(results[i])):
+    #         if j != i:
+    #             false_positive_img_count += results[j][i]
+
+    def show2():
+        cf_matrix = np.array(([tp, fp], [fn, tn]), dtype=int)
+        # print(cf_matrix)
+
+        group_names = ['True Pos', 'False Pos', 'False Neg', 'True Neg']
+        group_counts = ['{0:0.0f}'.format(value) for value in
+                        cf_matrix.flatten()]
+        group_percentages = ['{0:.2%}'.format(value) for value in
+                             cf_matrix.flatten() / np.sum(cf_matrix)]
+        labels = [f"{v1}\n{v2}\n{v3}" for v1, v2, v3 in
+                  zip(group_names, group_counts, group_percentages)]
+        labels = np.asarray(labels).reshape(2, 2)
+        sns.set(font_scale=2)
+        sns.heatmap(cf_matrix, annot=labels, fmt='', cmap='Blues', cbar=False, xticklabels=False, yticklabels=False)
+
+    def show10():
+        fig = plt.figure(figsize=(10, 10), dpi=100)
+        ax = fig.add_subplot(1, 1, 1)
+        ax.set_ylabel('Predicted Values', fontsize=20.0)
+        ax.set_xlabel('Actual Values', fontsize=20.0)
+        ax.set_aspect('equal')
+        plt.tick_params(axis='both', which='both', bottom=False, left=False, labelleft=False, labelbottom=False,
+                        labelsize=20)
+
+        for i in range(len(results)):
+            for j in range(len(results[i])):
+                text = ax.text(j, i, results[j, i],
+                               ha="center", va="center", color="black", fontsize=12)
+        ax.imshow(results, interpolation='nearest', cmap='Blues')
+
+    show2()
+    show10()
+
+
+# %%
+
+model_prediction(utk_model_ft)
+
+# %%
+model_prediction(vgg_model_ft)
+
+
+# %%
+
+def correctness(model):  # get correctness for faces
+    was_training = model.training
+    # correct = 0
+    total = 0
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+    results = np.zeros((10, 10), dtype=int)
     model.eval()
     # Disable gradient calculation
-
     with torch.no_grad():
         for i, (imgs, labels) in enumerate(utk_vgg_dataloader):
             imgs = imgs.float().to(device)
@@ -401,21 +568,36 @@ def model_prediction(model):
             outputs = model(imgs)
             _, preds = torch.max(outputs, 1)
 
-    for i in range(preds.size()[0]):
-        total += 1
-        if preds[i].item() == utk_vgg_dataset[i][1]:
-            correct += 1
-    print('total: ', total)
-    print('correct: ', correct)
-    print('accuracy: ', (correct / total))
-    model.train(mode=was_training)
+            for i in range(preds.size()[0]):
+                results[utk_vgg_dataset[i][1]][preds[i].item()] += 1
+                total += 1
+            model.train(mode=was_training)
+    print(results)
 
+    for i in range(len(results)):  # get true positive (all correctly classified faces)
+        tp += results[i][i]
 
-# %%
-model_prediction(utk_model_ft)
+    for i in range(len(results) - 1):  # true negative (all things that that are correctly classified as non-faces)
+        for j in range(len(results) - 1):
+            tn += results[j][i]
 
-# %%
-model_prediction(vgg_model_ft)
+    for i in range(len(results) - 1):  # false positive (all other things incorrectly classified as face)
+        fp += results[i][9]
+
+    for i in range(len(results) - 1):  # false negative (all faces incorrectly classified as non-face)
+        fn += results[9][i]
+
+    # for i in range(len(results)): # get false positive; iterate through each column
+    #     for j in range(len(results[i])):
+    #         if j != i:
+    #             false_positive_img_count += results[j][i]
+
+    print('tp: ', tp)
+    print('tn: ', tn)
+    print('fp: ', fp)
+    print('fn: ', fn)
+
+    return tp, tn, fp, fn
 
 
 # %% md
@@ -423,21 +605,23 @@ model_prediction(vgg_model_ft)
 
 # %%
 
-def _plot_roc_curve(val, preds):
-    fpr, tpr, _ = roc_curve(val, preds)
-
+def _plot_roc_curve(tpr, fpr):
     plt.figure(1, figsize=(6, 5))
     plt.title('ROC curve')
     plt.xlabel('False positive rate')
     plt.ylabel('True positive rate')
 
-    plt.plot(fpr, tpr, color='darkorange')
+    plt.plot(fpr, tpr, color='red')
     plt.legend(loc="lower right")
     plt.show()
+    # sns.set(font_scale= 1)
 
 
-# test array
-valid = np.array([1, 1, 0, 0])
-val_scores = np.array([0.1, 0.4, 0.35, 0.8])
-
-plot = _plot_roc_curve(valid, val_scores)
+tp, tn, fp, fn = correctness(vgg_model_ft)
+# calculate true positive rate
+tpr = tp / (tp + fn)
+print('tpr: ', tpr)
+# Calculate false positive rate
+fpr = fp / (fp + tn)
+print('fpr: ', fpr)
+plot = _plot_roc_curve(tpr, fpr)
