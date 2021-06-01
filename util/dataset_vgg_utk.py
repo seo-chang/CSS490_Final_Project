@@ -47,4 +47,4 @@ class ValDatasetVggUtk(torch.utils.data.Dataset):
 if __name__ == '__main__':
     data_util = DatasetUtil(base_dir="../datasets/")
     test = ValDatasetVggUtk(data_util)
-    print(test[-10])
+    print(test[10])

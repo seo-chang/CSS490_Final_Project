@@ -577,7 +577,7 @@ class DatasetUtil:
 # Just for testing
 if __name__ == '__main__':
     test = DatasetUtil(base_dir="../datasets/")
-    test.save_all_json(True)
+    # test.save_all_json(True)
 
     # test.imagenet_save_to_file()
     # test.utk_save_to_file()
