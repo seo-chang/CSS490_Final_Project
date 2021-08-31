@@ -9,7 +9,7 @@ We will have a goal of analyzing two well-known face recognition datasets ([VGG 
 ![](Images/Methodology.png)
 ![](Images/Architecture.png)
 ![](Images/Accuracy.png)
-![](Images/EncounteredIssues.png)
+![](Images/EncounteredIssue.png)
 
 
 
