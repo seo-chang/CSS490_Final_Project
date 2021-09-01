@@ -14,9 +14,10 @@ We will have a goal of analyzing two well-known face recognition datasets ([VGG 
 
 <h2>Execution</h2>
 We recommend use coLab because of high usage of GPU
-  <li>1. Download <code>main_colab.ipynb</code></li>
-  <li>2. Uncommnet lines from Import statements</li>
-  
+  <li>1. Clone the repository</li>
+  <li>2. Open <code>main_colab.ipynb</code></li>
+  <li>3. Uncommnet lines from Import statements</li>
+
 ```py
 from google.colab import drive  
 drive.mount('/content/drive')
